@@ -27,7 +27,7 @@
   .pin { font-size: 30px; letter-spacing: .3em; font-weight: 700; font-variant-numeric: tabular-nums; user-select: text; }
   .qr { display: flex; gap: 16px; align-items: center; }
   .qr img { width: 120px; height: 120px; border-radius: 8px; }
-  input[type=number] { width: 90px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; }
+  input[type=number], input[type=text] { width: 90px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; }
   .steps { color: var(--dim); font-size: 12.5px; line-height: 1.55; margin: 8px 0 0; }
   .steps code { background: var(--bg); padding: 1px 6px; border-radius: 5px; color: var(--fg); user-select: text; }
   .err { color: var(--bad); margin-bottom: 12px; }
@@ -69,12 +69,12 @@
     <div class="row"><div class="lbl"><b>Schedule</b><span id="schedDesc"></span></div><button id="refresh">Refresh</button></div>
     <div class="row"><div class="lbl"><b>Adaptive timing</b><span id="adDesc"></span></div>
       <div class="seg" id="adaptive"><button data-v="none">Off</button><button data-v="oneWay">Shorten</button><button data-v="twoWay">Both</button></div></div>
-    <div class="row"><div class="lbl"><b>Turn amber at</b><span>seconds remaining</span></div><input type="number" id="closing" min="0" max="600"></div>
   </div>
 
   <div class="card">
     <h2>Advanced</h2>
-    <div class="row"><div class="lbl"><b>Port</b><span>Changing this changes all links</span></div><input type="number" id="port" min="1024" max="65535"></div>
+    <div class="row"><div class="lbl"><b>Link name</b><span id="hostDesc"></span></div><input type="text" id="hostname" maxlength="30" style="width:120px"></div>
+    <div class="row"><div class="lbl"><b>Port</b><span id="portDesc">80 gives the cleanest links; 4580 is used if it’s taken</span></div><input type="number" id="port" min="1" max="65535"></div>
     <div class="row"><div class="lbl"><b>No PIN on this computer</b><span>OBS on this machine can control without a PIN</span></div><label class="chk"><input type="checkbox" id="localNoPin"></label></div>
   </div>
 

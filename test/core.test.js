@@ -23,6 +23,21 @@ const feedList = [
   },
 ];
 
+test('feed with camelCase keys (as published) is understood', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const camel = [
+    { date: '2026-10-25T00:00:00', talks: [], songNumbers: [1] },
+    { date: '2026-10-26T00:00:00', talks: [{ talkType: 100, minutes: 3, isStudentTalk: true }, { talkType: 300, minutes: 15, isStudentTalk: false }] },
+  ];
+  const ok = async () => ({ ok: true, text: async () => JSON.stringify(camel) });
+  const r = await getMeetingForWeek({ cachePath: path.join(dir, 'f.json'), now: new Date(2026, 9, 27), fetchImpl: ok });
+  assert.strictEqual(r.source, 'network');
+  const s = buildSchedule({ type: 'midweek', meeting: r.meeting });
+  assert.strictEqual(s.find((i) => i.key === 'ministry1').durationSecs, 180);
+  assert.strictEqual(s.find((i) => i.key === 'ministry1').isStudentTalk, true);
+  assert.strictEqual(s.find((i) => i.key === 'living1').durationSecs, 900);
+});
+
 test('week + meeting type detection', () => {
   assert.strictEqual(mondayKey(new Date(2026, 9, 28)), '2026-10-26'); // Wed
   assert.strictEqual(mondayKey(new Date(2026, 9, 25)), '2026-10-19'); // Sun belongs to previous Monday
@@ -60,7 +75,7 @@ test('timer start/stop/adjust/select with fake clock', () => {
   timer.start();
   t += 5000;
   assert.strictEqual(timer.elapsedMs(), 5000);
-  timer.stop();
+  timer.pause();
   t += 9000;
   assert.strictEqual(timer.elapsedMs(), 5000);
   timer.start();
@@ -74,6 +89,31 @@ test('timer start/stop/adjust/select with fake clock', () => {
   assert.strictEqual(timer.running, false);
   assert.strictEqual(timer.elapsedMs(), 0);
   assert.strictEqual(timer.select(99), false);
+});
+
+test('stop finishes the part and lines up the next one', () => {
+  let t = 0;
+  const timer = new StageTimer({ now: () => t });
+  timer.setSchedule(buildSchedule({ type: 'weekend' }));
+  timer.finish(); // nothing started yet: stays put
+  assert.strictEqual(timer.currentId, 1);
+
+  timer.start();
+  t += 61000;
+  timer.finish();
+  assert.strictEqual(timer.items[0].completedSecs, 61);
+  assert.strictEqual(timer.currentId, 2);
+  assert.strictEqual(timer.running, false);
+  assert.strictEqual(timer.elapsedMs(), 0);
+
+  // pausing keeps the part; stopping a paused part also finishes it
+  timer.start();
+  t += 10000;
+  timer.pause();
+  assert.strictEqual(timer.currentId, 2);
+  timer.finish();
+  assert.strictEqual(timer.items[1].completedSecs, 10);
+  assert.strictEqual(timer.currentId, 2); // last part: stays, ready to go again
 });
 
 test('feed: network, cache, stale fallback', async () => {
@@ -102,9 +142,9 @@ test('http api: PIN, commands, state', async () => {
   const service = new StageService({ dataDir: dir, now: () => new Date(2026, 9, 28), fetchImpl: ok });
   service.settings.localNoPin = false;
   await service.loadSchedule();
-  const server = createServer(service);
-  await server.listen(0 || 45811);
-  const base = 'http://127.0.0.1:45811';
+  const server = createServer(service, { mdns: false });
+  const port = await server.start(45811);
+  const base = `http://127.0.0.1:${port}`;
   const post = (p, body, pin) =>
     fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json', ...(pin ? { 'x-pin': pin } : {}) }, body: JSON.stringify(body || {}) });
 
@@ -112,6 +152,11 @@ test('http api: PIN, commands, state', async () => {
   assert.strictEqual((await post('/api/timer/start', {}, service.settings.pin)).status, 200);
   assert.strictEqual((await (await fetch(base + '/api/state')).json()).running, true);
   await post('/api/timer/adjust', { deltaSeconds: 30 }, service.settings.pin);
+  assert.strictEqual((await (await post('/api/timer/stop', {}, service.settings.pin)).json()).currentId, 2);
+  const conn = await fetch(base + '/api/connect', { headers: { 'x-pin': service.settings.pin } });
+  const info = await conn.json();
+  assert.ok(info.qr.includes('<svg') && info.pin === service.settings.pin && info.control.endsWith('/control'));
+  assert.strictEqual((await fetch(base + '/api/connect')).status, 401);
   await post('/api/timer/select', { talkId: 3 }, service.settings.pin);
   const st = await (await fetch(base + '/api/state')).json();
   assert.strictEqual(st.currentId, 3);

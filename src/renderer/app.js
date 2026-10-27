@@ -31,9 +31,11 @@ function paint(d) {
   $('circuit').checked = d.settings.circuitVisit;
   $('localNoPin').checked = d.settings.localNoPin;
   $('schedDesc').textContent = `${d.schedule.count} parts · ${SOURCE[d.schedule.source] || ''}`;
+  $('hostDesc').textContent = d.friendlyName ? `Other devices open ${d.friendlyName}` : 'Not available on this network — use the IP link';
+  $('portDesc').textContent = `Running on port ${d.port}` + (d.port !== d.settings.port ? ` (${d.settings.port} was unavailable)` : '');
   if (!editing) {
     $('port').value = d.settings.port;
-    $('closing').value = d.settings.closingSecs;
+    $('hostname').value = d.settings.hostname;
   }
 }
 
@@ -51,10 +53,10 @@ $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('newPin').onclick = () => window.stage.regeneratePin().then(paint);
 $('refresh').onclick = () => { $('schedDesc').textContent = 'Downloading…'; window.stage.refreshSchedule().then(paint); };
-for (const id of ['port', 'closing']) {
+for (const id of ['port', 'hostname']) {
   $(id).onfocus = () => (editing = true);
   $(id).onblur = () => { editing = false; };
-  $(id).onchange = () => save({ [id === 'port' ? 'port' : 'closingSecs']: $(id).value });
+  $(id).onchange = () => save({ [id]: $(id).value });
 }
 
 refresh();

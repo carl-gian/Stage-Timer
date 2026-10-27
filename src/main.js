@@ -19,9 +19,9 @@ async function startServer() {
   if (server) await server.close();
   server = createServer(service);
   try {
-    await server.listen(service.settings.port);
+    await server.start(service.settings.port);
   } catch (err) {
-    serverError = err.code === 'EADDRINUSE' ? `Port ${service.settings.port} is already in use. Choose another port.` : String(err.message);
+    serverError = err.code === 'EADDRINUSE' ? `Ports ${service.settings.port} and 4580 are both in use. Choose another port.` : String(err.message);
   }
 }
 
@@ -32,12 +32,14 @@ async function qrFor(text) {
 
 async function info() {
   const s = service.settings;
-  const urls = server.urls(s.port);
+  const urls = server.urls();
   return {
     settings: s,
     urls,
     qr: await qrFor(urls.control),
     serverError,
+    port: server.port,
+    friendlyName: server.friendlyName,
     meetingType: service.meetingType,
     schedule: { source: service.timer.meta.scheduleSource, error: service.timer.meta.scheduleError, count: service.timer.items.length },
     timer: { running: service.timer.running, talk: service.timer.current && service.timer.current.name },
@@ -82,7 +84,7 @@ function createTray() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open Stage Timer', click: showWindow },
-      { label: 'Open display in browser', click: () => shell.openExternal(server.urls(service.settings.port).displayLocal) },
+      { label: 'Open display in browser', click: () => shell.openExternal(server.urls().displayLocal) },
       { type: 'separator' },
       { label: 'Quit', click: () => { quitting = true; app.quit(); } },
     ]),
@@ -94,14 +96,15 @@ app.whenReady().then(async () => {
   service = new StageService({ dataDir: app.getPath('userData') });
   await service.loadSchedule();
   await startServer();
+  service.on('open-settings', showWindow); // from the OBS dock's gear button
   createTray();
   createWindow();
 
   ipcMain.handle('info', info);
   ipcMain.handle('update-settings', async (_e, patch) => {
-    const oldPort = service.settings.port;
+    const { port: oldPort, hostname: oldHost } = service.settings;
     await service.updateSettings(patch);
-    if (service.settings.port !== oldPort || serverError) await startServer();
+    if (service.settings.port !== oldPort || service.settings.hostname !== oldHost || serverError) await startServer();
     return info();
   });
   ipcMain.handle('regenerate-pin', async () => {

@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const QRCode = require('qrcode');
+const { advertise } = require('./mdns');
 
 const WEB_DIR = path.join(__dirname, '..', '..', 'web');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
@@ -26,8 +28,10 @@ function lanAddresses() {
   return out;
 }
 
-function createServer(service) {
+function createServer(service, { mdns: useMdns = true } = {}) {
   const clients = new Set();
+  let port = null; // the port we ended up on
+  let mdns = null;
   const failures = new Map(); // ip -> {count, since}
 
   const send = (res, code, body) => {
@@ -84,7 +88,8 @@ function createServer(service) {
 
   const commands = {
     start: () => service.timer.start(),
-    stop: () => service.timer.stop(),
+    pause: () => service.timer.pause(),
+    stop: () => service.timer.finish(),
     reset: () => service.timer.reset(),
     select: (b) => service.timer.select(Number(b.talkId)),
     adjust: (b) => service.timer.adjust(Number(b.deltaSeconds) || 0),
@@ -101,7 +106,7 @@ function createServer(service) {
     }
 
     if (req.method === 'GET' && p === '/api/state') return send(res, 200, service.timer.snapshot());
-    if (req.method === 'GET' && p === '/api/whoami') return send(res, 200, { pinRequired: pinRequired(req) });
+    if (req.method === 'GET' && p === '/api/whoami') return send(res, 200, { pinRequired: pinRequired(req), local: isLoopback(req.socket.remoteAddress) });
 
     if (req.method === 'GET' && p === '/api/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' });
@@ -109,6 +114,21 @@ function createServer(service) {
       clients.add(res);
       req.on('close', () => clients.delete(res));
       return;
+    }
+
+    if (req.method === 'GET' && p === '/api/connect') {
+      if (!authorised(req, res)) return;
+      const u = urls();
+      const qr = await QRCode.toString(u.control, { type: 'svg', margin: 1, color: { dark: '#0b0e14', light: '#ffffff' } });
+      return send(res, 200, { control: u.control, display: u.display, pin: service.settings.pin, qr });
+    }
+
+    if (req.method === 'POST' && p === '/api/app/settings') {
+      // Opens the settings window on the host computer; only from that computer.
+      if (!isLoopback(req.socket.remoteAddress)) return send(res, 403, { error: 'Only available on the host computer' });
+      if (!authorised(req, res)) return;
+      service.emit('open-settings');
+      return send(res, 200, { ok: true });
     }
 
     if (req.method === 'POST' && p === '/api/auth') {
@@ -138,29 +158,76 @@ function createServer(service) {
     send(res, 404, { error: 'Not found' });
   });
 
-  return {
-    listen(port) {
-      return new Promise((resolve, reject) => {
-        server.once('error', reject);
-        server.listen(port, '0.0.0.0', () => {
-          server.off('error', reject);
-          resolve();
-        });
+  function urls() {
+    const ip = lanAddresses()[0];
+    const host = mdns ? mdns.hostname : ip || 'localhost';
+    const suffix = port && port !== 80 ? `:${port}` : '';
+    const base = `http://${host}${suffix}`;
+    const local = `http://localhost${suffix}`;
+    return {
+      display: `${base}/display`,
+      control: `${base}/control`,
+      dock: `${local}/dock`,
+      displayLocal: `${local}/display`,
+      controlLocal: `${local}/control`,
+      ipDisplay: ip ? `http://${ip}${suffix}/display` : null,
+    };
+  }
+
+  function tryListen(p) {
+    return new Promise((resolve, reject) => {
+      const onError = (err) => reject(err);
+      server.once('error', onError);
+      server.listen(p, '0.0.0.0', () => {
+        server.off('error', onError);
+        resolve();
       });
+    });
+  }
+
+  return {
+    /** Listens on the preferred port (80 gives clean links) and falls back to 4580 if it is taken. */
+    async start(preferred) {
+      const candidates = [...new Set([preferred, 4580])];
+      let lastErr;
+      for (const p of candidates) {
+        try {
+          await tryListen(p);
+          port = p;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (err.code !== 'EADDRINUSE' && err.code !== 'EACCES') throw err;
+        }
+      }
+      if (port === null) throw lastErr;
+
+      const hostname = service.settings.hostname;
+      if (!useMdns) return port;
+      try {
+        mdns = advertise({ hostname, port, onError: () => {} });
+      } catch {
+        mdns = null; // no friendly name; the IP link still works
+      }
+      return port;
     },
-    close() {
+    async close() {
       clearInterval(heartbeat);
       for (const c of clients) c.end();
-      return new Promise((resolve) => server.close(resolve));
+      if (mdns) await mdns.stop();
+      mdns = null;
+      return new Promise((resolve) => (server.listening ? server.close(resolve) : resolve()));
     },
     get listening() {
       return server.listening;
     },
-    urls(port) {
-      const host = lanAddresses()[0] || 'localhost';
-      const base = `http://${host}:${port}`;
-      return { display: `${base}/display`, control: `${base}/control`, dock: `http://localhost:${port}/dock`, displayLocal: `http://localhost:${port}/display` };
+    get port() {
+      return port;
     },
+    get friendlyName() {
+      return mdns ? mdns.hostname : null;
+    },
+    urls,
   };
 }
 

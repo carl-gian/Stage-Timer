@@ -35,13 +35,43 @@
   .bar { height: 8px; background: #232b3a; border-radius: 99px; overflow: hidden; margin: 12px 0 0; }
   .bar i { display: block; height: 100%; width: 0; background: var(--ok); }
   [data-state="idle"] .t, [data-state="stopped"] .t { color: var(--dim); }
-  [data-state="closing"] .t { color: var(--warn); } [data-state="closing"] .bar i { background: var(--warn); }
-  [data-state="over"] .t { color: var(--bad); } [data-state="over"] .bar i { background: var(--bad); }
+  [data-state="minute"] .t, [data-state="half"] .t { color: var(--warn); }
+  [data-state="ten"] .t, [data-state="up"] .t, [data-state="over"] .t { color: var(--bad); }
+  [data-state="minute"] .bar i, [data-state="half"] .bar i { background: var(--warn); }
+  [data-state="ten"] .bar i, [data-state="up"] .bar i, [data-state="over"] .bar i { background: var(--bad); }
+  /* glow -> amber flash -> red flash -> flashing time's up (same ladder as the display) */
+  [data-state="minute"] .t { animation: glow 2.2s ease-in-out infinite; }
+  [data-state="half"] .t { animation: flash 1s ease-in-out infinite; }
+  [data-state="ten"] .t { animation: flash .8s ease-in-out infinite; }
+  [data-state="up"] .t { animation: flash .7s ease-in-out infinite; }
+  @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .15; } }
+  @keyframes glow { 0%, 100% { text-shadow: 0 0 2px rgba(255,176,32,.2); } 50% { text-shadow: 0 0 18px rgba(255,176,32,.95), 0 0 40px rgba(255,176,32,.5); } }
+  .clock { position: relative; overflow: hidden; }
+  .clock::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 18px; opacity: 0; }
+  [data-state="half"].clock::after { box-shadow: inset 0 0 28px rgba(255,176,32,.7); animation: flash 1s ease-in-out infinite; }
+  [data-state="ten"].clock::after { box-shadow: inset 0 0 32px rgba(255,77,77,.8); animation: flash .8s ease-in-out infinite; }
+  [data-state="up"].clock::after { box-shadow: inset 0 0 36px rgba(255,77,77,.95); animation: flash .7s ease-in-out infinite; }
+  .popup { position: absolute; top: 6px; left: 50%; transform: translate(-50%, -160%); opacity: 0; padding: 6px 16px; border-radius: 99px; font-weight: 700; font-size: 15px; white-space: nowrap; background: var(--warn); color: #1b1200; box-shadow: 0 6px 20px rgba(0,0,0,.45); transition: transform .3s cubic-bezier(.2,.9,.3,1.2), opacity .2s; pointer-events: none; z-index: 2; }
+  .popup.show { transform: translate(-50%, 0); opacity: 1; }
+  .popup[data-kind="ten"], .popup[data-kind="up"] { background: var(--bad); color: #fff; }
+  .popup[data-kind="up"] { animation: flash .7s ease-in-out infinite; }
 
-  .main { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 12px; }
+  .icons { display: flex; align-items: center; gap: 8px; }
+  .ib { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 9px; background: var(--card); border: 1px solid var(--line); font-size: 13px; color: var(--dim); display: none; }
+  .ib.show { display: inline-block; } .ib:hover, .ib.on { color: var(--fg); border-color: var(--accent); }
+  .connect { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; gap: 14px; align-items: center; }
+  .connect.show { display: flex; }
+  .connect .qr { width: 120px; height: 120px; flex: none; border-radius: 8px; overflow: hidden; background: #fff; }
+  .connect .qr svg { width: 100%; height: 100%; display: block; }
+  .connect .pin { font-size: 28px; font-weight: 700; letter-spacing: .25em; font-variant-numeric: tabular-nums; }
+  .connect small { color: var(--dim); display: block; word-break: break-all; }
+  .connect .lbl { color: var(--dim); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin-top: 8px; }
+  @media (max-width: 380px) { .connect { flex-direction: column; align-items: flex-start; } }
+
+  .main { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-top: 12px; }
   .go { height: 64px; border-radius: 16px; font-size: 22px; font-weight: 700; background: var(--ok); color: #05260f; }
   .go.stop { background: var(--bad); color: #2b0505; }
-  .reset { height: 64px; padding: 0 20px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); font-size: 15px; }
+  .reset { height: 64px; padding: 0 16px; min-width: 76px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); font-size: 15px; }
 
   .adj { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
   .adj button { height: 48px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -55,6 +85,7 @@
   .part .d.chg { color: var(--accent); }
   .part .d.ad { color: var(--warn); }
   .part .d s { color: var(--dim); opacity: .7; margin-right: 6px; }
+  .part.done { opacity: .6; }
   .part.cur { border-color: var(--accent); background: #16213a; }
   .part.cur .n { font-weight: 700; }
   .part .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); }
@@ -79,13 +110,27 @@
 <body>
 <header>
   <h1 id="title">Stage Timer<small id="sub"></small></h1>
-  <div class="conn" id="conn"><i></i><span>Connecting</span></div>
+  <div class="icons">
+    <button class="ib show" id="connectBtn" title="Show QR code and PIN for phones">Connect</button>
+    <button class="ib" id="settingsBtn" title="Open Stage Timer settings">⚙ Settings</button>
+    <div class="conn" id="conn"><i></i><span>Connecting</span></div>
+  </div>
 </header>
+
+<div class="connect" id="connectPanel">
+  <div class="qr" id="qr"></div>
+  <div>
+    <div class="lbl" style="margin-top:0">PIN</div><div class="pin" id="pinShow">····</div>
+    <div class="lbl">Control link</div><small id="ctrlLink"></small>
+    <div class="lbl">Display link</div><small id="dispLink"></small>
+  </div>
+</div>
 
 <div class="banner" id="banner"></div>
 <div class="banner pace" id="pace"></div>
 
 <section class="clock" id="clock" data-state="idle">
+  <div class="popup" id="popup"></div>
   <div class="sec" id="section">&nbsp;</div>
   <div class="nm" id="name">Loading…</div>
   <div class="t" id="time">0:00</div>
@@ -95,6 +140,7 @@
 
 <div class="main">
   <button class="go" id="go">Start</button>
+  <button class="reset" id="second">Pause</button>
   <button class="reset" id="reset">Reset</button>
 </div>
 
@@ -150,15 +196,35 @@
     if (!ok) showGate();
   });
 
+  // Start / Stop(=done, move to next part) ; second button = Pause while running, Stop while paused
+  const paused = () => state && !state.running && state.elapsedMs > 0;
   $('go').onclick = () => api(state && state.running ? 'stop' : 'start');
+  $('second').onclick = () => api(paused() ? 'stop' : 'pause');
   $('reset').onclick = () => api('reset');
+
+  // Connect panel (hidden until asked for) and settings
+  $('connectBtn').onclick = async () => {
+    const panel = $('connectPanel');
+    if (panel.classList.toggle('show')) {
+      const r = await fetch('/api/connect', { headers: { 'x-pin': pin } });
+      if (r.status === 401 || r.status === 429) { panel.classList.remove('show'); return showGate((await r.json()).error); }
+      const c = await r.json();
+      $('qr').innerHTML = c.qr; $('pinShow').textContent = c.pin;
+      $('ctrlLink').textContent = c.control; $('dispLink').textContent = c.display;
+    }
+    $('connectBtn').classList.toggle('on', panel.classList.contains('show'));
+    $('connectBtn').textContent = panel.classList.contains('show') ? 'Hide' : 'Connect';
+  };
+  $('settingsBtn').onclick = () => api('../app/settings');
+  fetch('/api/whoami').then((r) => r.json()).then((w) => $('settingsBtn').classList.toggle('show', !!w.local));
+  const alerter = ST.alerter($('popup'));
   document.querySelectorAll('.adj button').forEach((b) => (b.onclick = () => api('adjust', { deltaSeconds: +b.dataset.d })));
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !$('gate').classList.contains('show')) { e.preventDefault(); $('go').click(); }
   });
 
   function renderList() {
-    const key = JSON.stringify(state.items.map((i) => [i.id, i.durationSecs, i.adaptedSecs])) + state.currentId;
+    const key = JSON.stringify(state.items.map((i) => [i.id, i.durationSecs, i.adaptedSecs, i.completedSecs])) + state.currentId;
     if (key === listKey) return;
     listKey = key;
     const list = $('list'); list.textContent = '';
@@ -179,6 +245,7 @@
         const old = document.createElement('s'); old.textContent = ST.fmt(it.durationSecs); d.appendChild(old);
         d.appendChild(document.createTextNode(ST.fmt(it.adaptedSecs)));
       } else d.textContent = ST.fmt(it.durationSecs);
+      if (it.completedSecs != null && it.id !== state.currentId) { b.classList.add('done'); d.textContent = '✓ ' + ST.fmt(it.completedSecs) + ' / ' + d.textContent; }
       b.onclick = () => api('select', { talkId: it.id });
       list.appendChild(b);
     }
@@ -208,6 +275,8 @@
     $('go').textContent = state.running ? 'Stop' : (state.elapsedMs > 0 ? 'Resume' : 'Start');
     $('go').classList.toggle('stop', state.running);
     $('go').disabled = !state.talk;
+    $('second').textContent = paused() ? 'Stop' : 'Pause';
+    $('second').disabled = !state.talk || (!state.running && !paused());
   }
 
   function tick() {
@@ -216,9 +285,10 @@
       $('clock').dataset.state = v.state;
       $('time').textContent = v.text;
       $('fill').style.width = (v.progress * 100).toFixed(1) + '%';
+      alerter(v.state, state.currentId);
       const orig = state.items.find((i) => i.id === state.currentId);
       const adapted = orig && orig.adaptedSecs != null && orig.adaptedSecs !== orig.durationSecs;
-      $('meta').textContent = orig ? (adapted ? 'Adapted ' : 'Planned ') + ST.fmt(state.targetSecs) + (orig.originalSecs !== state.targetSecs ? ' (was ' + ST.fmt(orig.originalSecs) + ')' : '') + ' · ' + { idle: 'Ready', running: 'Running', closing: 'Wrap up', over: 'Over time', stopped: 'Stopped' }[v.state] : '';
+      $('meta').textContent = orig ? (adapted ? 'Adapted ' : 'Planned ') + ST.fmt(state.targetSecs) + (orig.originalSecs !== state.targetSecs ? ' (was ' + ST.fmt(orig.originalSecs) + ')' : '') + ' · ' + { idle: 'Ready', running: 'Running', minute: '1 minute left', half: '30 seconds left', ten: '10 seconds left', up: 'Time’s up', over: 'Over time', stopped: 'Paused' }[v.state] : '';
     }
     setTimeout(tick, 100);
   }

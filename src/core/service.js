@@ -22,7 +22,8 @@ class StageService extends EventEmitter {
     this.cachePath = path.join(dataDir, 'feed.json');
 
     this.settings = {
-      port: 4580,
+      port: 80, // preferred; falls back to 4580 if unavailable
+      hostname: 'stage', // reachable as stage.local on the same network
       pin: randomPin(),
       localNoPin: true, // OBS on this computer doesn't need the PIN
       meetingMode: 'auto', // auto | midweek | weekend
@@ -88,12 +89,14 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
-    this.settings.port = Math.min(65535, Math.max(1024, parseInt(this.settings.port, 10) || before.port));
+    this.settings.port = Math.min(65535, Math.max(1, parseInt(this.settings.port, 10) || before.port));
     this.settings.closingSecs = Math.min(600, Math.max(0, parseInt(this.settings.closingSecs, 10) || 0));
+    this.settings.hostname = String(this.settings.hostname || '').toLowerCase();
+    if (!/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(this.settings.hostname)) this.settings.hostname = before.hostname;
     if (!/^\d{4,8}$/.test(String(this.settings.pin))) this.settings.pin = before.pin;
     this.settings.pin = String(this.settings.pin);
     if (!['none', 'oneWay', 'twoWay'].includes(this.settings.adaptiveMode)) this.settings.adaptiveMode = before.adaptiveMode;

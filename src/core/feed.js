@@ -6,10 +6,33 @@ const { mondayKey } = require('./schedule');
 const DEFAULT_FEED_URL = 'https://soundbox.blob.core.windows.net/meeting-feeds/feed.json';
 const TOO_OLD_MS = 20 * 24 * 3600 * 1000; // same refresh window as OnlyT
 
+// The feed uses camelCase keys (OnlyT's JSON parser ignores case); accept either.
+const pick = (o, name) => (o ? o[name] ?? o[name[0].toUpperCase() + name.slice(1)] : undefined);
+
+function normaliseMeeting(m) {
+  const date = pick(m, 'date');
+  if (typeof date !== 'string') return null;
+  const talks = pick(m, 'talks') || [];
+  return {
+    Date: date,
+    Talks: talks.map((t) => ({
+      TalkType: pick(t, 'talkType'),
+      Minutes: Number(pick(t, 'minutes')) || 0,
+      IsStudentTalk: !!pick(t, 'isStudentTalk'),
+    })),
+  };
+}
+
 function findWeek(list, now) {
   if (!Array.isArray(list)) return null;
   const key = mondayKey(now);
-  return list.find((m) => typeof m.Date === 'string' && m.Date.slice(0, 10) === key) || null;
+  const hit = list.find((m) => {
+    const d = pick(m, 'date');
+    return typeof d === 'string' && d.slice(0, 10) === key;
+  });
+  const meeting = hit && normaliseMeeting(hit);
+  // A week with no talks listed (e.g. a Sunday entry or an unpublished week) is as good as missing.
+  return meeting && meeting.Talks.length ? meeting : null;
 }
 
 function readCache(path) {

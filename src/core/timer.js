@@ -39,7 +39,7 @@ class StageTimer extends EventEmitter {
   }
 
   setSchedule(items, meta = {}) {
-    this.items = items;
+    this.items = items.map((i) => ({ completedSecs: null, ...i }));
     this.meta = meta;
     this.base = 0;
     this.startedAt = null;
@@ -84,11 +84,23 @@ class StageTimer extends EventEmitter {
     this._changed();
   }
 
-  stop() {
+  pause() {
     if (!this.running) return;
     this.base = this.elapsedMs();
     this.startedAt = null;
     this._changed();
+  }
+
+  /** Stop = this part is done: remember how long it took and line up the next part. */
+  finish() {
+    const cur = this.current;
+    if (!cur || (!this.running && this.base === 0)) return;
+    cur.completedSecs = Math.round(this.elapsedMs() / 1000);
+    this.startedAt = null;
+    this.base = 0;
+    const next = this.items[this.items.indexOf(cur) + 1];
+    if (next) this.select(next.id);
+    else this._changed();
   }
 
   reset() {

@@ -20,15 +20,43 @@
   .time { font-size: 30vmin; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; transition: color .2s; }
   .bar { width: 70vw; height: 2.2vmin; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
   .bar > i { display: block; height: 100%; width: 0; background: var(--ok); transition: background .2s; }
+
+  /* Colour by stage */
   [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--dim); }
-  [data-state="running"] .time { color: var(--fg); }
-  [data-state="closing"] .time { color: var(--warn); }
-  [data-state="over"] .time { color: var(--bad); }
-  [data-state="closing"] .bar > i { background: var(--warn); }
-  [data-state="over"] .bar > i { background: var(--bad); }
-  [data-state="stopped"] .time { animation: blink 1.4s steps(2) infinite; }
-  @keyframes blink { 50% { opacity: .55; } }
-  .offline { position: fixed; top: 1.5vmin; right: 2vmin; font-size: 2.4vmin; color: var(--bad); display: none; }
+  [data-state="minute"] .time, [data-state="half"] .time { color: var(--warn); }
+  [data-state="ten"] .time, [data-state="up"] .time, [data-state="over"] .time { color: var(--bad); }
+  [data-state="minute"] .bar > i, [data-state="half"] .bar > i { background: var(--warn); }
+  [data-state="ten"] .bar > i, [data-state="up"] .bar > i, [data-state="over"] .bar > i { background: var(--bad); }
+
+  /* Motion by stage: slow amber glow -> amber flash -> faster red flash -> flashing time's up */
+  [data-state="stopped"] .time { animation: dim 1.4s ease-in-out infinite; }
+  [data-state="minute"] .time { animation: glow 2.2s ease-in-out infinite; }
+  [data-state="half"] .time { animation: flash 1s ease-in-out infinite; }
+  [data-state="ten"] .time { animation: flash .8s ease-in-out infinite; }
+  [data-state="up"] .time { animation: flash .7s ease-in-out infinite; }
+  @keyframes dim { 50% { opacity: .55; } }
+  @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
+  @keyframes glow { 0%, 100% { text-shadow: 0 0 .05em rgba(255,176,32,.15); } 50% { text-shadow: 0 0 .3em rgba(255,176,32,.95), 0 0 .8em rgba(255,176,32,.55); } }
+
+  /* Edge flash around the whole screen (visible over transparent OBS sources too) */
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0; }
+  [data-state="half"]::after { box-shadow: inset 0 0 9vmin rgba(255,176,32,.75); animation: edge 1s ease-in-out infinite; }
+  [data-state="ten"]::after { box-shadow: inset 0 0 11vmin rgba(255,77,77,.85); animation: edge .8s ease-in-out infinite; }
+  [data-state="up"]::after { box-shadow: inset 0 0 13vmin rgba(255,77,77,.95); animation: edge .7s ease-in-out infinite; }
+  @keyframes edge { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+  /* Pop-up message */
+  .popup {
+    position: fixed; top: 6vmin; left: 50%; transform: translate(-50%, -140%); opacity: 0;
+    font-size: 6vmin; font-weight: 700; padding: 1.4vmin 4vmin; border-radius: 99px; white-space: nowrap;
+    color: #1b1200; background: var(--warn); box-shadow: 0 1vmin 4vmin rgba(0,0,0,.4);
+    transition: transform .35s cubic-bezier(.2,.9,.3,1.2), opacity .25s; pointer-events: none;
+  }
+  .popup.show { transform: translate(-50%, 0); opacity: 1; }
+  .popup[data-kind="ten"], .popup[data-kind="up"] { background: var(--bad); color: #fff; }
+  .popup[data-kind="up"] { font-size: 8vmin; animation: flash .7s ease-in-out infinite; }
+
+  .offline { position: fixed; bottom: 1.5vmin; right: 2vmin; font-size: 2.4vmin; color: var(--bad); display: none; }
   body.off .offline { display: block; }
   .hide { display: none !important; }
 </style>
@@ -38,6 +66,7 @@
   <div class="name" id="name">Waiting for schedule…</div>
   <div class="time" id="time">0:00</div>
   <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="popup" id="popup"></div>
   <div class="offline">● reconnecting…</div>
 <script src="/client.js"></script>
 <script>
@@ -50,6 +79,7 @@
 
   let last = null;
   const conn = ST.connect((s) => { last = s; }, (ok) => document.body.classList.toggle('off', !ok));
+  const alerter = ST.alerter($('popup'));
 
   function draw() {
     if (last) {
@@ -59,6 +89,7 @@
       $('section').textContent = last.talk ? last.talk.section : '';
       $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
       $('fill').style.width = (v.progress * 100).toFixed(2) + '%';
+      alerter(v.state, last.currentId);
     }
     requestAnimationFrame(draw);
   }
