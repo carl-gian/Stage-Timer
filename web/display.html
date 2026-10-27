@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage Timer Display</title>
+<style>
+  /* Options (URL query):  ?bg=transparent  ?name=0  ?bar=0  ?mode=elapsed  */
+  :root { --ok:#3ddc84; --warn:#ffb020; --bad:#ff4d4d; --dim:#8a93a6; --fg:#fff; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #0b0e14; color: var(--fg); overflow: hidden;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin;
+  }
+  body.transparent { background: transparent; }
+  .name { font-size: 5vmin; color: var(--dim); letter-spacing: .02em; text-align: center; padding: 0 4vw; }
+  .section { font-size: 2.6vmin; color: var(--dim); text-transform: uppercase; letter-spacing: .14em; opacity: .8; }
+  .time { font-size: 30vmin; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; transition: color .2s; }
+  .bar { width: 70vw; height: 2.2vmin; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--ok); transition: background .2s; }
+  [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--dim); }
+  [data-state="running"] .time { color: var(--fg); }
+  [data-state="closing"] .time { color: var(--warn); }
+  [data-state="over"] .time { color: var(--bad); }
+  [data-state="closing"] .bar > i { background: var(--warn); }
+  [data-state="over"] .bar > i { background: var(--bad); }
+  [data-state="stopped"] .time { animation: blink 1.4s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+  .offline { position: fixed; top: 1.5vmin; right: 2vmin; font-size: 2.4vmin; color: var(--bad); display: none; }
+  body.off .offline { display: block; }
+  .hide { display: none !important; }
+</style>
+</head>
+<body data-state="idle">
+  <div class="section" id="section"></div>
+  <div class="name" id="name">Waiting for schedule…</div>
+  <div class="time" id="time">0:00</div>
+  <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="offline">● reconnecting…</div>
+<script src="/client.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id); // (window.name is built in, so no id-globals)
+  const q = new URLSearchParams(location.search);
+  if (q.get('bg') === 'transparent') document.body.classList.add('transparent');
+  if (q.get('name') === '0') { $('name').classList.add('hide'); $('section').classList.add('hide'); }
+  if (q.get('bar') === '0') $('bar').classList.add('hide');
+  const elapsedMode = q.get('mode') === 'elapsed';
+
+  let last = null;
+  const conn = ST.connect((s) => { last = s; }, (ok) => document.body.classList.toggle('off', !ok));
+
+  function draw() {
+    if (last) {
+      const v = ST.view(last, conn.offset());
+      document.body.dataset.state = v.state;
+      $('name').textContent = last.talk ? last.talk.name : 'No schedule';
+      $('section').textContent = last.talk ? last.talk.section : '';
+      $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
+      $('fill').style.width = (v.progress * 100).toFixed(2) + '%';
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+</script>
+</body>
+</html>

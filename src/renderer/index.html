@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Stage Timer</title>
+<style>
+  :root { --bg:#0b0e14; --card:#141923; --line:#232b3a; --fg:#eef1f7; --dim:#8a93a6; --ok:#3ddc84; --bad:#ff4d4d; --accent:#4c8dff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px system-ui, -apple-system, "Segoe UI", sans-serif; padding: 20px; user-select: none; }
+  h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: 10px; }
+  .pill { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 99px; background: #12301f; color: var(--ok); }
+  .pill.bad { background: #3a1313; color: var(--bad); }
+  .sub { color: var(--dim); margin: 4px 0 18px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .lbl { flex: 1; min-width: 0; }
+  .row .lbl b { display: block; font-weight: 600; }
+  .row .lbl span { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; user-select: text; }
+  button { font: inherit; color: var(--fg); background: #1d2433; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: #262f44; } button.primary { background: var(--accent); border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; padding: 6px 14px; }
+  .seg button.on { background: var(--accent); }
+  .pin { font-size: 30px; letter-spacing: .3em; font-weight: 700; font-variant-numeric: tabular-nums; user-select: text; }
+  .qr { display: flex; gap: 16px; align-items: center; }
+  .qr img { width: 120px; height: 120px; border-radius: 8px; }
+  input[type=number] { width: 90px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; }
+  .steps { color: var(--dim); font-size: 12.5px; line-height: 1.55; margin: 8px 0 0; }
+  .steps code { background: var(--bg); padding: 1px 6px; border-radius: 5px; color: var(--fg); user-select: text; }
+  .err { color: var(--bad); margin-bottom: 12px; }
+  label.chk { display: flex; align-items: center; gap: 8px; }
+</style>
+</head>
+<body>
+  <h1>Stage Timer <span class="pill" id="status">Starting…</span></h1>
+  <p class="sub" id="sub">&nbsp;</p>
+  <div class="err" id="err"></div>
+
+  <div class="card">
+    <h2>Open the timer</h2>
+    <div class="row"><div class="lbl"><b>Display</b><span id="uDisplay"></span></div><button data-open="displayLocal">Open</button><button data-copy="display">Copy link</button></div>
+    <div class="row"><div class="lbl"><b>Control</b><span id="uControl"></span></div><button data-open="control">Open</button><button data-copy="control">Copy link</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Control from a phone or another computer</h2>
+    <div class="qr">
+      <img id="qr" alt="QR code for the control page">
+      <div><div style="color:var(--dim);font-size:12px">PIN</div><div class="pin" id="pin">••••</div>
+        <div style="margin-top:8px"><button id="newPin">New PIN</button></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>OBS</h2>
+    <div class="row"><div class="lbl"><b>Control dock</b><span id="uDock"></span></div><button data-copy="dock" class="primary">Copy link</button></div>
+    <div class="steps">In OBS: <code>View → Docks → Custom Browser Docks…</code> → name it “Stage Timer” → paste the link → Apply.<br>
+      For the on-screen timer: add a <b>Browser Source</b> with the Display link plus <code>?bg=transparent</code>.</div>
+  </div>
+
+  <div class="card">
+    <h2>Meeting</h2>
+    <div class="row"><div class="lbl"><b>Meeting type</b><span id="mtDesc"></span></div>
+      <div class="seg" id="mode"><button data-v="auto">Auto</button><button data-v="midweek">Midweek</button><button data-v="weekend">Weekend</button></div></div>
+    <div class="row"><div class="lbl"><b>Circuit visit</b></div><label class="chk"><input type="checkbox" id="circuit"></label></div>
+    <div class="row"><div class="lbl"><b>Schedule</b><span id="schedDesc"></span></div><button id="refresh">Refresh</button></div>
+    <div class="row"><div class="lbl"><b>Adaptive timing</b><span id="adDesc"></span></div>
+      <div class="seg" id="adaptive"><button data-v="none">Off</button><button data-v="oneWay">Shorten</button><button data-v="twoWay">Both</button></div></div>
+    <div class="row"><div class="lbl"><b>Turn amber at</b><span>seconds remaining</span></div><input type="number" id="closing" min="0" max="600"></div>
+  </div>
+
+  <div class="card">
+    <h2>Advanced</h2>
+    <div class="row"><div class="lbl"><b>Port</b><span>Changing this changes all links</span></div><input type="number" id="port" min="1024" max="65535"></div>
+    <div class="row"><div class="lbl"><b>No PIN on this computer</b><span>OBS on this machine can control without a PIN</span></div><label class="chk"><input type="checkbox" id="localNoPin"></label></div>
+  </div>
+
+<script src="app.js"></script>
+</body>
+</html>
