@@ -9,6 +9,7 @@ const { getMeetingForWeek, DEFAULT_FEED_URL } = require('./feed');
 const { buildSchedule, detectMeetingType } = require('./schedule');
 const { ObsClient } = require('./obs');
 const { SceneSwitcher, DEFAULT_SETTLE_MS } = require('./sceneSwitcher');
+const { buildReport, ReportStore, REPORT_AFTER } = require('./report');
 
 const MEETING_TYPES = ['midweek', 'weekend'];
 
@@ -40,6 +41,8 @@ class StageService extends EventEmitter {
       obsPassword: '',
       obsSettleMs: DEFAULT_SETTLE_MS, // pause between Preview and Transition
       obsScenes: {}, // { midweek: { partKey: sceneName }, weekend: { ... } }
+      autoUpdate: true, // download new versions in the background (installed when the app is quit)
+      obsDefaultScene: '', // scene to show when a part is stopped (empty = leave OBS alone)
       ...this._readSettings(),
     };
     if (!this.settings.obsScenes || typeof this.settings.obsScenes !== 'object') this.settings.obsScenes = {};
@@ -52,11 +55,30 @@ class StageService extends EventEmitter {
     this.switcher = new SceneSwitcher(this.obs, { settleMs: this.settings.obsSettleMs });
     this.switcher.on('change', () => this.emit('obs'));
     this.timer.on('part-start', (part) => this._onPartStart(part));
+    this.timer.on('part-finish', (part) => this._onPartFinish(part));
+
+    this.reports = new ReportStore(path.join(dataDir, 'reports'));
+    this.latestReport = this.reports.list()[0] || null;
   }
 
-  /** Timer snapshot plus the little OBS status the control page shows. */
+  /** Timer snapshot plus the little OBS and report status the control page shows. */
   snapshot() {
-    return { ...this.timer.snapshot(), obs: { enabled: this.settings.obsEnabled, problem: this.obsProblem } };
+    return { ...this.timer.snapshot(), obs: { enabled: this.settings.obsEnabled, problem: this.obsProblem }, report: this.latestReport };
+  }
+
+  /** Writes an over/under report for every part timed so far. `trigger` is the part it follows (null = on request). */
+  makeReport(trigger = null) {
+    const report = buildReport({
+      items: this.timer.items,
+      meetingType: this.timer.meta.meetingType,
+      circuitVisit: !!this.timer.meta.circuitVisit,
+      trigger: trigger && trigger.name,
+      createdAt: this.nowDate(),
+    });
+    this.reports.save(report);
+    this.latestReport = this.reports.list()[0];
+    this.emit('report');
+    return report;
   }
 
   get obsProblem() {
@@ -96,6 +118,11 @@ class StageService extends EventEmitter {
     if (!this.settings.obsEnabled || !part) return;
     const scene = (this.settings.obsScenes[this.timer.meta.meetingType] || {})[part.key];
     if (scene) this.switcher.switchTo(scene);
+  }
+
+  _onPartFinish(part) {
+    if (REPORT_AFTER.has(part.key)) this.makeReport(part);
+    if (this.settings.obsEnabled && this.settings.obsDefaultScene) this.switcher.switchTo(this.settings.obsDefaultScene);
   }
 
   _readSettings() {
@@ -148,7 +175,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'autoUpdate'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
@@ -160,6 +187,7 @@ class StageService extends EventEmitter {
     this.settings.pin = String(this.settings.pin);
     if (!['none', 'oneWay', 'twoWay'].includes(this.settings.adaptiveMode)) this.settings.adaptiveMode = before.adaptiveMode;
 
+    this.settings.autoUpdate = this.settings.autoUpdate !== false;
     this.settings.obsEnabled = this.settings.obsEnabled === true;
     this.settings.obsPassword = String(this.settings.obsPassword ?? '');
     const url = String(this.settings.obsUrl ?? '').trim();
@@ -167,6 +195,8 @@ class StageService extends EventEmitter {
     this.settings.obsUrl = /^wss?:\/\/[^\s/]+\S*$/i.test(withScheme) ? withScheme : before.obsUrl;
     const settle = parseInt(this.settings.obsSettleMs, 10);
     this.settings.obsSettleMs = Number.isFinite(settle) ? Math.min(2000, Math.max(0, settle)) : before.obsSettleMs;
+    const fallback = this.settings.obsDefaultScene;
+    this.settings.obsDefaultScene = typeof fallback === 'string' && fallback.length <= 256 ? fallback : before.obsDefaultScene;
     this._saveSettings();
 
     this.timer.setClosingSecs(this.settings.closingSecs);

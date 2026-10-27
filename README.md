@@ -17,6 +17,8 @@ of sounds or system notifications.
 - **Easy links.** `http://stage.local/display`: no IP address or port to type.
 - **Warnings you can see from the back of the room.** Amber glow with one minute left, flashing amber from 30 s, flashing red from 10 s, then a flashing "Time's up" pop-up.
 - **OBS scene switching** (optional). Give each part an OBS scene; when the part starts, the scene is sent to OBS Preview and then Transitioned, like pressing the button in Studio Mode. See [OBS scene switching](#obs-scene-switching-optional).
+- **Timer report.** When the Congregation Bible Study or Watchtower Study is stopped, a report of every part's over and under time is saved and shown on a printable page.
+- **Automatic updates.** New versions download in the background and install when you quit. It never restarts by itself.
 - **Adaptive timing** (optional). If the meeting runs early or late, later parts are shortened or lengthened in proportion.
 
 ## Quick start
@@ -33,6 +35,7 @@ Closing the window keeps Stage Timer running in the system tray.
 | Page | Use |
 |---|---|
 | `/display` | The timer. Options: `?bg=transparent` `?name=0` (hide part name) `?bar=0` (hide progress bar) `?mode=elapsed` (count up) |
+| `/report` | The latest timer report (`?id=` for an earlier one). Printable |
 | `/control` | Full control page for phones and tablets (PIN required away from the host computer) |
 | `/dock` | The same control page, sized for an OBS Custom Browser Dock |
 
@@ -56,10 +59,24 @@ Off by default. When on, starting a part puts its scene on air using OBS Studio 
 
 Details worth knowing:
 
+- **When a part is stopped** you can also send a default scene (for example the full stage shot) so OBS isn't left on the last part's scene. Pick it under *When a part is stopped*; *None* leaves OBS alone. Only Stop does this, not Pause or Reset.
 - Only the **start** of a part switches scenes. Resuming after a pause does not, and a scene that is already on air is left alone.
 - **Wait before Transition** (default 300 ms) gives another program time to react to the new Preview scene and pick its transition. If the wait is too short, OBS uses the previous transition. The wait ends early, after a short grace, as soon as OBS reports that the transition changed. Tune it on your own setup.
 - Switches never overlap: if you start another part while a transition is running, it waits for the transition to end, and only the most recent request runs.
 - Problems (OBS not running, wrong password, Studio Mode off, a scene that no longer exists) show in the settings window and as a banner in the control page and dock. The timer itself is never held up by OBS.
+
+## Timer report
+
+A report is saved when the **Congregation Bible Study** (midweek) or the **Watchtower Study** (weekend) is stopped. Concluding Comments does not make one. It lists every part with its planned time, actual time and how far over or under it ran, plus the net total for the meeting. Parts not yet timed show as "Not timed" and are left out of the totals.
+
+- Over and under are measured against the time the clock was actually counting to, so any ±30 s / ±1 min adjusting or adaptive timing is taken into account. The report shows a *Target* column when any part differed from plan.
+- Open it from the **Report** button in the control page and dock, or from the *Timer reports* card in Stage Timer's window, which also has **Make a report now** (handy for a circuit visit week, when the Bible Study isn't held).
+- A part only counts as timed when you press **Stop** on it (Pause alone does not).
+- Reports are saved as small files in the app's data folder (`reports/`), so earlier weeks stay available.
+
+## Updates
+
+On the Windows installer, Stage Timer checks GitHub for a newer release shortly after it starts and every few hours, downloads it quietly, and installs it **when you quit the app**. It never restarts by itself, and *Restart and update* is disabled while the timer is running. You can turn this off, or check by hand, under *Updates* in the app window. The installer isn't code-signed, so updates are trusted on the strength of the GitHub release they come from.
 
 ## Links, ports and networking
 
@@ -83,6 +100,8 @@ The control page uses a small HTTP API you can call yourself (send the PIN in an
 | POST | `/api/timer/select` | `{ "talkId": 3 }` |
 | POST | `/api/timer/adjust` | `{ "deltaSeconds": -30 }` |
 | POST | `/api/timer/refresh` | re-download the schedule |
+| POST | `/api/timer/report` | make a timer report now |
+| GET | `/api/report` · `/api/reports` | the latest (or `?id=`) report · list of reports |
 
 ## Build from source
 

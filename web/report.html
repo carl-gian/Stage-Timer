@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0e14">
+<title>Stage Timer Report</title>
+<style>
+  :root { --bg:#0b0e14; --card:#141923; --line:#232b3a; --fg:#eef1f7; --dim:#8a93a6; --ok:#3ddc84; --bad:#ff4d4d; --under:#6ea8ff; --accent:#4c8dff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 16px 16px 40px; max-width: 760px; margin: 0 auto; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  .meta { color: var(--dim); font-size: 13px; margin-top: 4px; }
+  .tools { display: flex; gap: 8px; align-items: center; }
+  select, button { font: inherit; font-size: 13px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; max-width: 220px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .card .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .card .v { font-size: 26px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .card .s { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  h2 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-weight: 600; margin: 22px 4px 6px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th { text-align: right; font-size: 11px; font-weight: 600; color: var(--dim); padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  td { text-align: right; padding: 10px 12px; font-variant-numeric: tabular-nums; border-top: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  table { table-layout: fixed; } th:first-child { width: 38%; }
+  tr:first-child td { border-top: 0; }
+  td.n { font-weight: 600; }
+  .over { color: var(--bad); } .under { color: var(--under); } .ontime { color: var(--ok); } .none { color: var(--dim); }
+  .note { color: var(--dim); font-size: 12px; margin-top: 14px; }
+  .empty { text-align: center; color: var(--dim); padding: 60px 0; }
+  @media print {
+    :root { --bg:#fff; --card:#fff; --line:#ccc; --fg:#000; --dim:#555; --bad:#c00; --under:#0050b3; --ok:#087f3a; }
+    .tools { display: none; } body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+  const $ = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const fmt = (secs) => { const s = Math.abs(Math.round(secs)); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
+  const diff = (secs) => (secs === 0 ? ['On time', 'ontime'] : secs > 0 ? ['+' + fmt(secs) + ' over', 'over'] : ['−' + fmt(secs) + ' under', 'under']);
+
+  async function load(id) {
+    const [list, report] = await Promise.all([
+      fetch('/api/reports').then((r) => r.json()),
+      fetch('/api/report' + (id ? '?id=' + encodeURIComponent(id) : '')).then((r) => (r.ok ? r.json() : null)),
+    ]);
+    draw(list, report);
+  }
+
+  function draw(list, r) {
+    const app = document.getElementById('app');
+    app.textContent = '';
+    if (!r) { app.append($('div', 'empty', 'No timer report yet. One is made when the Congregation Bible Study or Watchtower Study is stopped.')); return; }
+
+    const when = new Date(r.createdAt);
+    const head = $('header');
+    const title = $('div');
+    title.append($('h1', '', 'Timer report'));
+    title.append($('div', 'meta', (r.meetingType === 'weekend' ? 'Weekend meeting' : 'Midweek meeting') + (r.circuitVisit ? ' · circuit visit' : '') + ' · ' +
+      when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) +
+      ' · ' + (r.trigger ? 'after ' + r.trigger : 'made on request')));
+    const tools = $('div', 'tools');
+    if (list.length > 1) {
+      const sel = $('select');
+      for (const x of list) sel.add(new Option(new Date(x.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + ' · ' + x.meetingType, x.id));
+      sel.value = r.id;
+      sel.onchange = () => { history.replaceState(null, '', '?id=' + sel.value); load(sel.value); };
+      tools.append(sel);
+    }
+    const print = $('button', '', 'Print'); print.onclick = () => window.print(); tools.append(print);
+    head.append(title, tools);
+    app.append(head);
+
+    const t = r.totals;
+    const [netText, netCls] = diff(t.diffSecs);
+    const cards = $('div', 'cards');
+    const card = (k, v, s, cls) => { const c = $('div', 'card'); c.append($('div', 'k', k), $('div', 'v ' + (cls || ''), v), $('div', 's', s)); cards.append(c); };
+    card('Net over / under', netText, 'across ' + t.timedParts + ' timed part' + (t.timedParts === 1 ? '' : 's'), netCls);
+    card('Ran over', String(t.overParts), 'part' + (t.overParts === 1 ? '' : 's'), t.overParts ? 'over' : 'none');
+    card('Finished early', String(t.underParts), 'part' + (t.underParts === 1 ? '' : 's'), t.underParts ? 'under' : 'none');
+    card('Time used', fmt(t.actualSecs), 'of ' + fmt(t.targetSecs) + ' allowed');
+    app.append(cards);
+
+    const showTarget = r.parts.some((p) => p.targetSecs != null && p.targetSecs !== p.plannedSecs);
+    let section = null, table = null;
+    for (const p of r.parts) {
+      if (p.section !== section) {
+        section = p.section;
+        app.append($('h2', '', section));
+        table = $('table');
+        const hr = $('tr');
+        for (const h of ['Part', 'Planned'].concat(showTarget ? ['Target'] : [], ['Actual', 'Over / under'])) hr.append($('th', '', h));
+        table.append(hr);
+        app.append(table);
+      }
+      const tr = $('tr');
+      tr.append($('td', 'n', p.name), $('td', '', fmt(p.plannedSecs)));
+      if (showTarget) tr.append($('td', p.targetSecs !== p.plannedSecs ? '' : 'none', p.targetSecs == null ? '—' : fmt(p.targetSecs)));
+      if (p.actualSecs == null) { tr.append($('td', 'none', '—'), $('td', 'none', 'Not timed')); }
+      else { const [text, cls] = diff(p.diffSecs); tr.append($('td', '', fmt(p.actualSecs)), $('td', cls, text)); }
+      table.append(tr);
+    }
+    app.append($('div', 'note', 'Over / under compares each part with the time its clock was counting to, including any adjusting or adaptive change. Parts not timed are left out of the totals.'));
+  }
+
+  load(new URLSearchParams(location.search).get('id'));
+</script>
+</body>
+</html>

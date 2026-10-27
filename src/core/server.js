@@ -10,7 +10,7 @@ const { advertise } = require('./mdns');
 
 const WEB_DIR = path.join(__dirname, '..', '..', 'web');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
-const PAGES = { '/': 'control.html', '/control': 'control.html', '/dock': 'control.html', '/display': 'display.html' };
+const PAGES = { '/': 'control.html', '/control': 'control.html', '/dock': 'control.html', '/display': 'display.html', '/report': 'report.html' };
 
 const isLoopback = (addr = '') => addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
 
@@ -84,6 +84,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
   };
   service.timer.on('change', broadcast);
   service.on('obs', broadcast);
+  service.on('report', broadcast);
   // Heartbeat: keeps connections alive and re-syncs clocks of any client that drifted.
   const heartbeat = setInterval(() => clients.size && broadcast(), 1000);
 
@@ -95,6 +96,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     select: (b) => service.timer.select(Number(b.talkId)),
     adjust: (b) => service.timer.adjust(Number(b.deltaSeconds) || 0),
     refresh: () => service.loadSchedule({ force: true }),
+    report: () => service.makeReport(),
   };
 
   const server = http.createServer(async (req, res) => {
@@ -108,6 +110,14 @@ function createServer(service, { mdns: useMdns = true } = {}) {
 
     if (req.method === 'GET' && p === '/api/state') return send(res, 200, service.snapshot());
     if (req.method === 'GET' && p === '/api/whoami') return send(res, 200, { pinRequired: pinRequired(req), local: isLoopback(req.socket.remoteAddress) });
+
+    if (req.method === 'GET' && p === '/api/reports') return send(res, 200, service.reports.list());
+    if (req.method === 'GET' && p === '/api/report') {
+      // ?id=<report id>, or the newest report when no id is given
+      const id = url.searchParams.get('id') || (service.latestReport && service.latestReport.id);
+      const report = id && service.reports.get(id);
+      return report ? send(res, 200, report) : send(res, 404, { error: 'No such report' });
+    }
 
     if (req.method === 'GET' && p === '/api/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' });
@@ -171,6 +181,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       dock: `${local}/dock`,
       displayLocal: `${local}/display`,
       controlLocal: `${local}/control`,
+      reportLocal: `${local}/report`,
       ipDisplay: ip ? `http://${ip}${suffix}/display` : null,
     };
   }
@@ -216,6 +227,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       clearInterval(heartbeat);
       service.timer.off('change', broadcast);
       service.off('obs', broadcast);
+      service.off('report', broadcast);
       for (const c of clients) c.end();
       if (mdns) await mdns.stop();
       mdns = null;

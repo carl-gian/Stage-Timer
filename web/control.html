@@ -58,7 +58,8 @@
 
   .icons { display: flex; align-items: center; gap: 8px; }
   .ib { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 9px; background: var(--card); border: 1px solid var(--line); font-size: 13px; color: var(--dim); display: none; }
-  .ib.show { display: inline-block; } .ib:hover, .ib.on { color: var(--fg); border-color: var(--accent); }
+  .ib.show { display: inline-block; } a.ib { line-height: 30px; text-decoration: none; }
+  .ib:hover, .ib.on { color: var(--fg); border-color: var(--accent); }
   .connect { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; gap: 14px; align-items: center; }
   .connect.show { display: flex; }
   .connect .qr { width: 120px; height: 120px; flex: none; border-radius: 8px; overflow: hidden; background: #fff; }
@@ -111,6 +112,7 @@
 <header>
   <h1 id="title">Stage Timer<small id="sub"></small></h1>
   <div class="icons">
+    <a class="ib" id="reportBtn" href="/report" target="_blank" rel="noopener" title="Open the latest timer report">Report</a>
     <button class="ib show" id="connectBtn" title="Show QR code and PIN for phones">Connect</button>
     <button class="ib" id="settingsBtn" title="Open Stage Timer settings">⚙ Settings</button>
     <div class="conn" id="conn"><i></i><span>Connecting</span></div>
@@ -263,6 +265,8 @@
       banner.innerHTML = 'Couldn’t download this week’s schedule — using default times. <button id="retry">Try again</button>';
       $('retry').onclick = () => api('refresh');
     } else banner.style.display = 'none';
+    $('reportBtn').classList.toggle('show', !!state.report);
+    if (state.report) $('reportBtn').href = '/report?id=' + encodeURIComponent(state.report.id);
     const obsProblem = state.obs && state.obs.enabled ? state.obs.problem : null;
     $('obsBanner').style.display = obsProblem ? 'block' : 'none';
     $('obsBanner').textContent = obsProblem ? 'OBS scenes: ' + obsProblem : '';

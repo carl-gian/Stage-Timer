@@ -87,6 +87,19 @@
   </div>
 
   <div class="card">
+    <h2>Timer reports</h2>
+    <div class="hint" style="margin-top:0">A report of every part's over and under time is made when the Congregation Bible Study (midweek) or Watchtower Study (weekend) is stopped.</div>
+    <div id="reports"></div>
+    <div class="row"><div class="lbl"><span id="reportDesc"></span></div><button id="makeReport">Make a report now</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Updates</h2>
+    <div class="row"><div class="lbl"><b id="verLine">Stage Timer</b><span id="updDesc"></span></div><button id="checkUpd">Check now</button><button id="installUpd" class="primary" style="display:none">Restart and update</button></div>
+    <div class="row"><div class="lbl"><b>Update automatically</b><span>Downloads new versions in the background and installs them when you quit. Never restarts by itself.</span></div><label class="chk"><input type="checkbox" id="autoUpdate"></label></div>
+  </div>
+
+  <div class="card">
     <h2>Advanced</h2>
     <div class="row"><div class="lbl"><b>Link name</b><span id="hostDesc"></span></div><input type="text" id="hostname" maxlength="30" style="width:120px"></div>
     <div class="row"><div class="lbl"><b>Port</b><span id="portDesc">80 gives the cleanest links; 4580 is used if it’s taken</span></div><input type="number" id="port" min="1" max="65535"></div>

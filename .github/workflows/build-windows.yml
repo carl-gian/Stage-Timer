@@ -25,11 +25,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Stage-Timer-Windows
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
           if-no-files-found: error
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.exe
+          files: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
           body_path: RELEASE_NOTES.md

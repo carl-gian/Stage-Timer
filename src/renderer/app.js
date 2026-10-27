@@ -38,6 +38,29 @@ function paint(d) {
     $('hostname').value = d.settings.hostname;
   }
   paintObs(d);
+  paintReports(d);
+  paintUpdate(d);
+}
+
+function paintUpdate(d) {
+  const u = d.update;
+  $('verLine').textContent = `Version ${d.version}`;
+  $('autoUpdate').checked = d.settings.autoUpdate;
+  const text = {
+    unsupported: u.message,
+    idle: '',
+    checking: 'Checking for updates…',
+    current: 'You have the latest version.',
+    downloading: `Downloading version ${u.version}… ${u.percent}%`,
+    ready: d.timer.running ? `Version ${u.version} is ready. Stop the timer to restart and update.` : `Version ${u.version} is ready. It installs when you quit, or restart now.`,
+    error: `Couldn’t check for updates. ${u.message}`,
+  }[u.state];
+  $('updDesc').textContent = text || '';
+  $('updDesc').classList.toggle('bad-text', u.state === 'error');
+  $('checkUpd').style.display = u.state === 'ready' || u.state === 'unsupported' ? 'none' : '';
+  $('checkUpd').disabled = u.state === 'checking' || u.state === 'downloading';
+  $('installUpd').style.display = u.state === 'ready' ? '' : 'none';
+  $('installUpd').disabled = d.timer.running;
 }
 
 let partsKey = '';
@@ -62,26 +85,62 @@ function paintObs(d) {
 
   // Rebuilding while a menu is open would close it, so only rebuild when something changed.
   const assigned = settings.obsScenes[d.meetingType] || {};
-  const key = JSON.stringify([d.parts, obs.scenes, assigned]);
+  const key = JSON.stringify([d.parts, obs.scenes, assigned, settings.obsDefaultScene]);
   if (key === partsKey || document.activeElement.tagName === 'SELECT') return;
   partsKey = key;
   $('obsParts').textContent = '';
-  for (const part of d.parts) {
+  const addRow = (label, hint, current, onPick) => {
     const row = document.createElement('div');
     row.className = 'row';
     const lbl = document.createElement('div');
     lbl.className = 'lbl';
-    lbl.textContent = part.name;
+    const b = document.createElement('b');
+    b.textContent = label;
+    lbl.append(b);
+    if (hint) {
+      const span = document.createElement('span');
+      span.textContent = hint;
+      lbl.append(span);
+    }
     const select = document.createElement('select');
     const names = [...obs.scenes];
-    const current = assigned[part.key] || '';
     if (current && !names.includes(current)) names.push(current);
     select.add(new Option('None', ''));
     for (const name of names) select.add(new Option(obs.scenes.length && !obs.scenes.includes(name) ? `${name} (not in OBS)` : name, name));
     select.value = current;
-    select.onchange = () => window.stage.assignScene(part.key, select.value).then(paint);
+    select.onchange = () => onPick(select.value);
     row.append(lbl, select);
     $('obsParts').append(row);
+  };
+  addRow('When a part is stopped', 'Shown after you press Stop. None leaves OBS as it is.', settings.obsDefaultScene || '', (scene) => save({ obsDefaultScene: scene }));
+  for (const part of d.parts) addRow(part.name, '', assigned[part.key] || '', (scene) => window.stage.assignScene(part.key, scene).then(paint));
+}
+
+let reportsKey = '';
+
+function paintReports(d) {
+  $('reportDesc').textContent = d.reports.length ? '' : 'No reports yet';
+  const key = JSON.stringify(d.reports);
+  if (key === reportsKey) return;
+  reportsKey = key;
+  $('reports').textContent = '';
+  for (const r of d.reports) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const lbl = document.createElement('div');
+    lbl.className = 'lbl';
+    const b = document.createElement('b');
+    b.textContent = new Date(r.createdAt).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+    const span = document.createElement('span');
+    const net = Math.abs(r.diffSecs);
+    const mins = `${Math.floor(net / 60)}:${String(net % 60).padStart(2, '0')}`;
+    span.textContent = `${r.meetingType === 'weekend' ? 'Weekend' : 'Midweek'} · ${r.diffSecs === 0 ? 'on time' : r.diffSecs > 0 ? `${mins} over` : `${mins} under`} overall`;
+    lbl.append(b, span);
+    const open = document.createElement('button');
+    open.textContent = 'Open';
+    open.onclick = () => window.stage.open(`${data.urls.reportLocal}?id=${encodeURIComponent(r.id)}`);
+    row.append(lbl, open);
+    $('reports').append(row);
   }
 }
 
@@ -99,6 +158,10 @@ $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
 for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });
+$('autoUpdate').onchange = (e) => save({ autoUpdate: e.target.checked });
+$('checkUpd').onclick = () => window.stage.checkUpdate().then(paint);
+$('installUpd').onclick = () => window.stage.installUpdate();
+$('makeReport').onclick = () => window.stage.makeReport().then(paint);
 $('newPin').onclick = () => window.stage.regeneratePin().then(paint);
 $('refresh').onclick = () => { $('schedDesc').textContent = 'Downloading…'; window.stage.refreshSchedule().then(paint); };
 for (const id of ['port', 'hostname']) {

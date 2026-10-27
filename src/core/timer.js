@@ -39,7 +39,7 @@ class StageTimer extends EventEmitter {
   }
 
   setSchedule(items, meta = {}) {
-    this.items = items.map((i) => ({ completedSecs: null, ...i }));
+    this.items = items.map((i) => ({ completedSecs: null, completedTargetSecs: null, ...i }));
     this.meta = meta;
     this.base = 0;
     this.startedAt = null;
@@ -98,11 +98,13 @@ class StageTimer extends EventEmitter {
     const cur = this.current;
     if (!cur || (!this.running && this.base === 0)) return;
     cur.completedSecs = Math.round(this.elapsedMs() / 1000);
+    cur.completedTargetSecs = this.actualSecs(cur); // what the clock was counting to, for over/under reporting
     this.startedAt = null;
     this.base = 0;
     const next = this.items[this.items.indexOf(cur) + 1];
     if (next) this.select(next.id);
     else this._changed();
+    this.emit('part-finish', cur);
   }
 
   reset() {

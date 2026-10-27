@@ -1,6 +1,15 @@
-# Stage Timer 1.1.1
+# Stage Timer 1.1.2
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.1.2
+
+- **Default scene when a part is stopped** (OBS scene switching). Choose a scene, such as the full stage shot, that OBS goes to when you press Stop, so it isn't left on the last part's scene. Only Stop does this; Pause and Reset don't. None (the default) leaves OBS alone.
+- **Timer report.** When the Congregation Bible Study (midweek) or the Watchtower Study (weekend) is stopped, Stage Timer saves a report of every part's planned time, actual time and how far over or under it ran, with a net total. Concluding Comments doesn't make one. Open it from the new **Report** button in the control page and dock, or from the app window, where you can also make one on request. The page prints cleanly, and earlier weeks are kept.
+- **Automatic updates.** New versions download quietly in the background and install when you quit the app. It never restarts by itself, and not while the timer is running. Turn it off or check by hand under *Updates* in the app window.
+- Fixed: the **Open** buttons in the app window did nothing when the app was using port 80.
+
+**Updating from 1.1.1 or earlier:** install this version by hand once. From then on, updates arrive automatically.
 
 ## What's new in 1.1
 
@@ -12,7 +21,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.1.1.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.1.2.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

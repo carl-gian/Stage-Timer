@@ -5,8 +5,9 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage }
 const QRCode = require('qrcode');
 const { StageService } = require('./core/service');
 const { createServer } = require('./core/server');
+const { UpdateManager } = require('./core/updates');
 
-let service, server, win, tray;
+let service, server, win, tray, updates;
 let serverError = null;
 let quitting = false;
 const qrCache = new Map();
@@ -44,9 +45,20 @@ async function info() {
     schedule: { source: service.timer.meta.scheduleSource, error: service.timer.meta.scheduleError, count: service.timer.items.length },
     timer: { running: service.timer.running, talk: service.timer.current && service.timer.current.name },
     obs: service.obsInfo(),
+    reports: service.reports.list().slice(0, 5),
     parts: service.timer.items.map((i) => ({ key: i.key, name: i.name, section: i.sectionTitle })),
     version: app.getVersion(),
+    update: updates ? updates.status() : null,
   };
+}
+
+function setupUpdates() {
+  // Updates come from the Windows installer's GitHub releases; a dev run or another OS has nothing to update.
+  const supported = app.isPackaged && process.platform === 'win32';
+  const reason = process.platform !== 'win32' ? 'Automatic updates are for the Windows installer.' : 'Updates only work in the installed app.';
+  const updater = supported ? require('electron-updater').autoUpdater : null;
+  updates = new UpdateManager({ updater, reason, isEnabled: () => service.settings.autoUpdate, isBusy: () => service.timer.running });
+  updates.start();
 }
 
 function showWindow() {
@@ -100,6 +112,7 @@ app.whenReady().then(async () => {
   service.startObs();
   await startServer();
   service.on('open-settings', showWindow); // from the OBS dock's gear button
+  setupUpdates();
   createTray();
   createWindow();
 
@@ -118,13 +131,25 @@ app.whenReady().then(async () => {
     service.assignScene({ meetingType: service.timer.meta.meetingType, key, scene });
     return info();
   });
+  ipcMain.handle('make-report', async () => {
+    service.makeReport();
+    return info();
+  });
+  ipcMain.handle('check-update', async () => {
+    await updates.check();
+    return info();
+  });
+  ipcMain.handle('install-update', () => {
+    updates.install(); // refused while the timer is running
+    return info();
+  });
   ipcMain.handle('refresh-schedule', async () => {
     await service.loadSchedule({ force: true });
     return info();
   });
   ipcMain.handle('copy', (_e, text) => clipboard.writeText(String(text)));
   ipcMain.handle('open', (_e, url) => {
-    if (/^http:\/\/(localhost|\d+\.\d+\.\d+\.\d+):\d+\//.test(url)) shell.openExternal(url);
+    if (/^http:\/\/(localhost|\d+\.\d+\.\d+\.\d+)(:\d+)?\//.test(url)) shell.openExternal(url);
   });
 });
 
