@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "serve": "node src/cli.js",
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.js\"",
     "dist": "electron-builder"
   },
   "keywords": [],
