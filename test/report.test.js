@@ -187,7 +187,80 @@ test('pdf: file names, never overwriting, and the saved path is remembered', asy
   service.on('report', (r) => (announced = r));
   run('study', 1800);
   assert.strictEqual(announced.id, service.latestReport.id); // the event carries the report, for the PDF writer
-  service.attachPdf(announced.id, first);
+  service.attachPdf(announced.id, ['/desktop/copy.pdf', first]); // Desktop copy, then the Documents copy the app opens
   assert.strictEqual(service.reports.list()[0].pdfPath, first);
+  assert.deepStrictEqual(service.reports.get(announced.id).pdfPaths, ['/desktop/copy.pdf', first]);
   assert.strictEqual(service.reports.get(announced.id).totals.timedParts, 1); // rest of the report untouched
+});
+
+test('counseling scene: after a ministry student talk only; other parts use the default', async () => {
+  const fake = await startFakeObs({ bridge: true, transitionMs: 50, program: 'A' });
+  const withTalks = async () => ({ ok: true, text: async () => JSON.stringify([{ Date: '2026-10-26T00:00:00', Talks: [{ TalkType: 100, Minutes: 4, IsStudentTalk: false }, { TalkType: 101, Minutes: 3, IsStudentTalk: true }] }]) });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const service = new StageService({ dataDir: dir, now: () => new Date(2026, 9, 28, 19, 30, 0), fetchImpl: withTalks });
+  await service.loadSchedule();
+  await service.updateSettings({ obsEnabled: true, obsUrl: fake.url, obsSettleMs: 50, obsDefaultScene: 'C', obsCounselScene: 'B' });
+  await until(() => service.obs.connected);
+  const stop = (key) => {
+    service.timer.select(service.timer.items.find((i) => i.key === key).id);
+    service.timer.start();
+    service.timer.finish();
+  };
+
+  stop('ministry2'); // a student talk: counsel is given
+  await until(() => fake.state.program === 'B' && !service.switcher.busy);
+  stop('ministry1'); // not a student talk
+  await until(() => fake.state.program === 'C' && !service.switcher.busy);
+  stop('digging'); // Treasures: default again, already on air
+  await sleep(200);
+  assert.strictEqual(fake.requests.filter((r) => r.type === 'TriggerStudioModeTransition').length, 2);
+
+  await service.updateSettings({ obsCounselScene: '' }); // no counseling scene: falls back to the default
+  stop('ministry2');
+  await sleep(200);
+  assert.strictEqual(fake.state.program, 'C');
+  await service.updateSettings({ obsEnabled: false });
+  await fake.close();
+});
+
+test('on-the-fly scenes: set mid-part from the control page, counseling scene per part', async () => {
+  const fake = await startFakeObs({ bridge: true, transitionMs: 50, program: 'A' });
+  const withTalks = async () => ({ ok: true, text: async () => JSON.stringify([{ Date: '2026-10-26T00:00:00', Talks: [{ TalkType: 101, Minutes: 3, IsStudentTalk: true }] }]) });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const service = new StageService({ dataDir: dir, now: () => new Date(2026, 9, 28, 19, 30, 0), fetchImpl: withTalks });
+  await service.loadSchedule();
+  await service.updateSettings({ obsEnabled: true, obsUrl: fake.url, obsSettleMs: 50, obsCounselScene: 'A' });
+  await until(() => service.obs.connected && service.switcher.scenes.length);
+  const server = createServer(service, { mdns: false });
+  const port = await server.start(45814);
+  const base = `http://127.0.0.1:${port}`;
+  const post = (body) => fetch(`${base}/api/timer/scene`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+  service.timer.select(service.timer.items.find((i) => i.key === 'ministry2').id);
+  // not started yet: remembered, nothing sent to OBS
+  assert.strictEqual((await post({ key: 'ministry2', scene: 'B', kind: 'scene' })).status, 200);
+  await sleep(150);
+  assert.strictEqual(fake.requests.filter((r) => r.type === 'SetCurrentPreviewScene').length, 0);
+  let snap = await (await fetch(`${base}/api/state`)).json();
+  assert.deepStrictEqual([snap.obs.assigned.ministry2, snap.obs.scenes], ['B', ['A', 'B', 'C']]);
+
+  service.timer.start(); // part starts: its scene goes on air
+  await until(() => fake.state.program === 'B' && !service.switcher.busy);
+
+  await post({ key: 'ministry2', scene: 'C', kind: 'scene' }); // changed mid-part: on air right away
+  await until(() => fake.state.program === 'C' && !service.switcher.busy);
+  await post({ key: 'ministry2', scene: 'A', kind: 'counsel' }); // counseling scene only remembered
+  await sleep(150);
+  assert.strictEqual(fake.state.program, 'C');
+  assert.strictEqual(service.settings.obsCounselScenes.midweek.ministry2, 'A');
+
+  await post({ key: 'ministry2', scene: 'B', kind: 'counsel' });
+  service.timer.finish(); // the part's own counseling scene beats the general one
+  await until(() => fake.state.program === 'B' && !service.switcher.busy);
+
+  await post({ key: 'ministry2', scene: '', kind: 'counsel' }); // cleared: back to the general one
+  assert.strictEqual(service.settings.obsCounselScenes.midweek.ministry2, undefined);
+  await server.close();
+  await service.updateSettings({ obsEnabled: false });
+  await fake.close();
 });

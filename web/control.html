@@ -79,6 +79,11 @@
   .adj button:active, .reset:active { background: var(--line); }
   .adjlabel { text-align: center; color: var(--dim); font-size: 12px; margin-top: 6px; }
 
+  .scenes { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; margin-top: 12px; }
+  .scenes.show { display: block; }
+  .srow { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .srow label { flex: none; width: 112px; font-size: 12px; color: var(--dim); }
+  .srow select { flex: 1; min-width: 0; height: 40px; font: inherit; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; }
   h2 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-weight: 600; margin: 20px 4px 8px; }
   .part { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 6px; min-height: 48px; }
   .part .n { flex: 1; font-size: 15px; }
@@ -154,6 +159,11 @@
   <button data-d="60">+1:00</button>
 </div>
 <div class="adjlabel">Adjust time for this part</div>
+
+<div class="scenes" id="scenes">
+  <div class="srow"><label for="selScene">Scene for this part</label><select id="selScene"></select></div>
+  <div class="srow" id="counselRow"><label for="selCounsel">Counseling scene</label><select id="selCounsel"></select></div>
+</div>
 
 <div id="list"></div>
 
@@ -254,9 +264,36 @@
     }
   }
 
+  // Scene pickers for the current part. Choosing one while the part is running puts it on air right away.
+  let scenesKey = '';
+  function renderScenes() {
+    const ob = state.obs;
+    const cur = state.items.find((i) => i.id === state.currentId);
+    const show = !!(ob && ob.enabled && cur);
+    $('scenes').classList.toggle('show', show);
+    if (!show) return;
+    const counselPart = cur.section === 'ministry' && cur.isStudentTalk;
+    $('counselRow').style.display = counselPart ? '' : 'none';
+    const key = JSON.stringify([cur.key, ob.scenes, ob.assigned[cur.key], ob.counsel[cur.key], counselPart]);
+    if (key === scenesKey || document.activeElement === $('selScene') || document.activeElement === $('selCounsel')) return;
+    scenesKey = key;
+    const fill = (sel, current, none, kind) => {
+      sel.textContent = '';
+      sel.add(new Option(none, ''));
+      const names = ob.scenes.slice();
+      if (current && !names.includes(current)) names.push(current);
+      for (const n of names) sel.add(new Option(n, n));
+      sel.value = current || '';
+      sel.onchange = () => api('scene', { key: cur.key, scene: sel.value, kind });
+    };
+    fill($('selScene'), ob.assigned[cur.key], 'None (leave OBS as is)', 'scene');
+    fill($('selCounsel'), ob.counsel[cur.key], 'Usual counseling scene', 'counsel');
+  }
+
   function render() {
     if (!state) return;
     renderList();
+    renderScenes();
     const dayType = state.meetingType === 'weekend' ? 'Weekend meeting' : 'Midweek meeting';
     $('sub').textContent = dayType + (state.circuitVisit ? ' · circuit visit' : '');
     const banner = $('banner');

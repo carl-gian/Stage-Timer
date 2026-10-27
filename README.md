@@ -59,7 +59,8 @@ Off by default. When on, starting a part puts its scene on air using OBS Studio 
 
 Details worth knowing:
 
-- **When a part is stopped** you can also send a default scene (for example the full stage shot) so OBS isn't left on the last part's scene. Pick it under *When a part is stopped*; *None* leaves OBS alone. Only Stop does this, not Pause or Reset.
+- **When a part is stopped** you can also send a default scene (for example the full stage shot) so OBS isn't left on the last part's scene. Pick it under *When a part is stopped*; *None* leaves OBS alone. Only Stop does this, not Pause or Reset. Midweek also has a separate **Counseling in Apply Yourself** scene: after a student talk in *Apply Yourself to the Field Ministry* is stopped (when the counsel is given), OBS goes to that scene instead of the default one.
+- **Change scenes on the fly.** The control page and dock show a *Scene for this part* picker for the current part. Choosing a scene while the part is running puts it on air immediately; choosing one before it starts saves it for when it starts. Student talks in Apply Yourself also get a *Counseling scene* picker, set per part, used when you press Stop. The choices are saved for next time.
 - Only the **start** of a part switches scenes. Resuming after a pause does not, and a scene that is already on air is left alone.
 - **Wait before Transition** (default 300 ms) gives another program time to react to the new Preview scene and pick its transition. If the wait is too short, OBS uses the previous transition. The wait ends early, after a short grace, as soon as OBS reports that the transition changed. Tune it on your own setup.
 - Switches never overlap: if you start another part while a transition is running, it waits for the transition to end, and only the most recent request runs.
@@ -72,7 +73,7 @@ A report is saved when the **Congregation Bible Study** (midweek) or the **Watch
 - Over and under are measured against the time the clock was actually counting to, so any ±30 s / ±1 min adjusting or adaptive timing is taken into account. The report shows a *Target* column when any part differed from plan.
 - Open it from the **Report** button in the control page and dock, or from the *Timer reports* card in Stage Timer's window, which also has **Make a report now** (handy for a circuit visit week, when the Bible Study isn't held).
 - A part only counts as timed when you press **Stop** on it (Pause alone does not).
-- Each report is also saved as a PDF named like `MIDWEEK Time Report 10-27-2026.pdf` (or `WEEKEND …`; month-day-year) in **Documents → Stage Timer Reports**. A second report on the same day gets `(2)` added rather than replacing the first. Use *Open PDF folder* in the app window to find them.
+- Each report is also saved as a PDF named like `MIDWEEK Time Report 10-27-2026.pdf` (or `WEEKEND …`; month-day-year) on your **Desktop** and in **Documents** (two copies). A second report on the same day gets `(2)` added rather than replacing the first.
 - Reports are also kept as small data files in the app's data folder (`reports/`), so earlier weeks stay available on the report page.
 
 ## Updates

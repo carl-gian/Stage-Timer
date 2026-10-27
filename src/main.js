@@ -55,16 +55,26 @@ async function info() {
   };
 }
 
-const reportsDir = () => path.join(app.getPath('documents'), 'Stage Timer Reports');
+// PDFs go to the Desktop and to Documents. Documents is last: it is the copy the app opens.
+const pdfDirs = () => [app.getPath('desktop'), app.getPath('documents')];
 
-/** Saves a report as e.g. "MIDWEEK Time Report 10-27-2026.pdf" in Documents/Stage Timer Reports. */
+/** Saves a report as e.g. "MIDWEEK Time Report 10-27-2026.pdf" on the Desktop and in Documents. */
 async function savePdf(report) {
   if (!server || serverError) return;
-  fs.mkdirSync(reportsDir(), { recursive: true });
   const pdf = await renderPdf(BrowserWindow, `${server.urls().reportLocal}?id=${encodeURIComponent(report.id)}`);
-  const file = uniquePath(reportsDir(), pdfName(report));
-  fs.writeFileSync(file, pdf);
-  service.attachPdf(report.id, file);
+  const saved = [];
+  for (const dir of pdfDirs()) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const file = uniquePath(dir, pdfName(report));
+      fs.writeFileSync(file, pdf);
+      saved.push(file);
+    } catch (err) {
+      console.error(`Could not save the report PDF in ${dir}:`, err); // the other copy may still work
+    }
+  }
+  if (!saved.length) throw new Error('No PDF could be saved');
+  service.attachPdf(report.id, saved);
 }
 
 function setupUpdates() {
@@ -153,12 +163,11 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('open-report-pdf', (_e, id) => {
     const file = service.reports.get(id)?.pdfPath;
-    // only ever open a file inside the reports folder
-    if (file && path.dirname(file) === reportsDir() && fs.existsSync(file)) shell.openPath(file);
+    // only ever open a file we saved on the Desktop or in Documents
+    if (file && pdfDirs().includes(path.dirname(file)) && fs.existsSync(file)) shell.openPath(file);
   });
   ipcMain.handle('open-reports-folder', () => {
-    fs.mkdirSync(reportsDir(), { recursive: true });
-    shell.openPath(reportsDir());
+    shell.openPath(app.getPath('documents'));
   });
   ipcMain.handle('check-update', async () => {
     await updates.check();

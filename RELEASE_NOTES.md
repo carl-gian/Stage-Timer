@@ -1,10 +1,16 @@
-# Stage Timer 1.1.3
+# Stage Timer 1.1.4
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
 
+## What's new in 1.1.4
+
+- **Change scenes during a part.** The control page and OBS dock now have a *Scene for this part* picker for the current part. Pick a scene while the part is running and it goes on air straight away; pick one before it starts and it's used when it starts. Nothing needs the app window.
+- **Counseling scene.** For student talks in Apply Yourself to the Field Ministry, a *Counseling scene* picker sets the scene OBS goes to when you press Stop (when the counsel is given). It is set per part, so each talk can use its own. *Usual counseling scene* uses the general one from the app window (*Counseling in Apply Yourself*), and if none is set, the default stop scene. Other parts use the default stop scene.
+- **PDF reports go to your Desktop and Documents.** Each report PDF is saved in both places, still named like `MIDWEEK Time Report 10-27-2026.pdf`.
+
 ## What's new in 1.1.3
 
-- **Timer reports are saved as PDFs.** When a report is made, Stage Timer also saves it as `MIDWEEK Time Report 10-27-2026.pdf` (or `WEEKEND Time Report …`, month-day-year) in **Documents → Stage Timer Reports**. Open the PDF, or the folder, from the *Timer reports* card in the app window. A second report on the same day is saved alongside the first as `(2)`.
+- **Timer reports are saved as PDFs.** When a report is made, Stage Timer also saves it as `MIDWEEK Time Report 10-27-2026.pdf` (or `WEEKEND Time Report …`, month-day-year) in **Documents → Stage Timer Reports** (from 1.1.4: on the Desktop and in Documents). Open the PDF, or the folder, from the *Timer reports* card in the app window. A second report on the same day is saved alongside the first as `(2)`.
 
 ## What's new in 1.1.2
 
@@ -25,7 +31,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.1.3.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.1.4.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

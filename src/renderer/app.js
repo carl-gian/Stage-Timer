@@ -85,7 +85,7 @@ function paintObs(d) {
 
   // Rebuilding while a menu is open would close it, so only rebuild when something changed.
   const assigned = settings.obsScenes[d.meetingType] || {};
-  const key = JSON.stringify([d.parts, obs.scenes, assigned, settings.obsDefaultScene]);
+  const key = JSON.stringify([d.parts, obs.scenes, assigned, settings.obsDefaultScene, settings.obsCounselScene]);
   if (key === partsKey || document.activeElement.tagName === 'SELECT') return;
   partsKey = key;
   $('obsParts').textContent = '';
@@ -113,6 +113,7 @@ function paintObs(d) {
     $('obsParts').append(row);
   };
   addRow('When a part is stopped', 'Shown after you press Stop. None leaves OBS as it is.', settings.obsDefaultScene || '', (scene) => save({ obsDefaultScene: scene }));
+  if (d.meetingType === 'midweek') addRow('Counseling in Apply Yourself', 'Shown after a student talk in the ministry section is stopped. None uses the scene above.', settings.obsCounselScene || '', (scene) => save({ obsCounselScene: scene }));
   for (const part of d.parts) addRow(part.name, '', assigned[part.key] || '', (scene) => window.stage.assignScene(part.key, scene).then(paint));
 }
 

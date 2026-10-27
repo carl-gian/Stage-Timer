@@ -42,10 +42,12 @@ class StageService extends EventEmitter {
       obsSettleMs: DEFAULT_SETTLE_MS, // pause between Preview and Transition
       obsScenes: {}, // { midweek: { partKey: sceneName }, weekend: { ... } }
       autoUpdate: true, // download new versions in the background (installed when the app is quit)
+      obsCounselScenes: {}, // per-part counseling scene, same shape as obsScenes
+      obsCounselScene: '', // scene after a ministry student talk is stopped (counsel is given); empty = use the default
       obsDefaultScene: '', // scene to show when a part is stopped (empty = leave OBS alone)
       ...this._readSettings(),
     };
-    if (!this.settings.obsScenes || typeof this.settings.obsScenes !== 'object') this.settings.obsScenes = {};
+    for (const k of ['obsScenes', 'obsCounselScenes']) if (!this.settings[k] || typeof this.settings[k] !== 'object') this.settings[k] = {};
     this._saveSettings();
 
     this.timer = new StageTimer({ now: () => Date.now(), closingSecs: this.settings.closingSecs, adaptiveMode: this.settings.adaptiveMode });
@@ -63,7 +65,15 @@ class StageService extends EventEmitter {
 
   /** Timer snapshot plus the little OBS and report status the control page shows. */
   snapshot() {
-    return { ...this.timer.snapshot(), obs: { enabled: this.settings.obsEnabled, problem: this.obsProblem }, report: this.latestReport };
+    const mt = this.timer.meta.meetingType;
+    const obs = {
+      enabled: this.settings.obsEnabled,
+      problem: this.obsProblem,
+      scenes: this.switcher.scenes, // for the control page's scene pickers
+      assigned: this.settings.obsScenes[mt] || {},
+      counsel: this.settings.obsCounselScenes[mt] || {},
+    };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport };
   }
 
   /** Writes an over/under report for every part timed so far. `trigger` is the part it follows (null = on request). */
@@ -81,11 +91,11 @@ class StageService extends EventEmitter {
     return report;
   }
 
-  /** Remembers where a report's PDF was saved. */
-  attachPdf(id, pdfPath) {
+  /** Remembers where a report's PDF copies were saved (the last one is the one the app opens). */
+  attachPdf(id, pdfPaths) {
     const report = this.reports.get(id);
     if (!report) return;
-    this.reports.save({ ...report, pdfPath });
+    this.reports.save({ ...report, pdfPaths, pdfPath: pdfPaths[pdfPaths.length - 1] });
     this.latestReport = this.reports.list()[0];
   }
 
@@ -111,15 +121,29 @@ class StageService extends EventEmitter {
     this.obs.disconnect();
   }
 
-  /** Remembers which OBS scene a part uses; an empty scene clears it. */
-  assignScene({ meetingType, key, scene }) {
+  /** Remembers which OBS scene a part uses (kind 'scene') or uses for its counsel (kind 'counsel'); an empty scene clears it. */
+  assignScene({ meetingType, key, scene, kind = 'scene' }) {
     if (!MEETING_TYPES.includes(meetingType) || !/^\w+$/.test(String(key))) return;
-    const forType = { ...this.settings.obsScenes[meetingType] };
+    const field = kind === 'counsel' ? 'obsCounselScenes' : 'obsScenes';
+    const forType = { ...this.settings[field][meetingType] };
     if (typeof scene === 'string' && scene && scene.length <= 256) forType[key] = scene;
     else delete forType[key];
-    this.settings.obsScenes = { ...this.settings.obsScenes, [meetingType]: forType };
+    this.settings[field] = { ...this.settings[field], [meetingType]: forType };
     this._saveSettings();
     this.emit('settings');
+    this.emit('obs'); // the control page shows the choice
+  }
+
+  /**
+   * Changing scenes from the control page, even mid-part. If the part is under way, a new scene for it goes on air
+   * straight away; otherwise it is simply remembered for when the part starts.
+   */
+  setPartScene({ key, scene, kind }) {
+    const meetingType = this.timer.meta.meetingType;
+    this.assignScene({ meetingType, key, scene, kind: kind === 'counsel' ? 'counsel' : 'scene' });
+    const cur = this.timer.current;
+    const underway = this.timer.running || this.timer.elapsedMs() > 0;
+    if (kind !== 'counsel' && scene && this.settings.obsEnabled && cur && cur.key === key && underway) this.switcher.switchTo(scene);
   }
 
   _onPartStart(part) {
@@ -130,7 +154,12 @@ class StageService extends EventEmitter {
 
   _onPartFinish(part) {
     if (REPORT_AFTER.has(part.key)) this.makeReport(part);
-    if (this.settings.obsEnabled && this.settings.obsDefaultScene) this.switcher.switchTo(this.settings.obsDefaultScene);
+    if (!this.settings.obsEnabled) return;
+    // After a student talk in Apply Yourself to the Field Ministry the counsel is given, which has its own scene.
+    const own = (this.settings.obsCounselScenes[this.timer.meta.meetingType] || {})[part.key];
+    const counsel = part.section === 'ministry' && part.isStudentTalk && (own || this.settings.obsCounselScene);
+    const scene = counsel || this.settings.obsDefaultScene;
+    if (scene) this.switcher.switchTo(scene);
   }
 
   _readSettings() {
@@ -183,7 +212,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'autoUpdate'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
@@ -205,6 +234,8 @@ class StageService extends EventEmitter {
     this.settings.obsSettleMs = Number.isFinite(settle) ? Math.min(2000, Math.max(0, settle)) : before.obsSettleMs;
     const fallback = this.settings.obsDefaultScene;
     this.settings.obsDefaultScene = typeof fallback === 'string' && fallback.length <= 256 ? fallback : before.obsDefaultScene;
+    const counsel = this.settings.obsCounselScene;
+    this.settings.obsCounselScene = typeof counsel === 'string' && counsel.length <= 256 ? counsel : before.obsCounselScene;
     this._saveSettings();
 
     this.timer.setClosingSecs(this.settings.closingSecs);
