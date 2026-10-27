@@ -46,7 +46,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Stage-Timer-Setup-${version}.exe"
     }
   },
   "repository": {
