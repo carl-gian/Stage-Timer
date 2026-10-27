@@ -1,8 +1,8 @@
-# Stage Timer 1.1.0
+# Stage Timer 1.1.1
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
 
-## What's new in 1.1.0
+## What's new in 1.1
 
 - **OBS scene switching** (optional, off by default). Give each part an OBS scene in Stage Timer's settings. When a part starts, its scene is sent to OBS Preview and then Transitioned, exactly like pressing the Transition button in Studio Mode, so tools that react to Preview and Transition (such as the EMEET-OBS Bridge) keep working. Needs OBS Studio Mode and the WebSocket server turned on.
   - Resuming after a pause does not switch scenes, and a scene that is already on air is left alone.
@@ -12,7 +12,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.1.0.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.1.1.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

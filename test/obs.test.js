@@ -212,12 +212,16 @@ test('service: starting a part sends its scene; resuming, unassigned parts and a
 });
 
 test('service: control page is told when OBS cannot be reached', async () => {
-  const fake = await startFakeObs();
-  const url = fake.url;
-  await fake.close();
+  // A socket that is refused straight away: how fast a real closed port is refused depends on the OS (slow on Windows).
+  class Refused {
+    constructor() {
+      setTimeout(() => this.onclose({ code: 1006 }), 5);
+    }
+    close() {}
+  }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
-  const service = new StageService({ dataDir: dir, now: () => new Date(2026, 9, 31) });
-  await service.updateSettings({ obsEnabled: true, obsUrl: url });
+  const service = new StageService({ dataDir: dir, now: () => new Date(2026, 9, 31), WebSocketImpl: Refused });
+  await service.updateSettings({ obsEnabled: true, obsUrl: 'ws://127.0.0.1:1' });
   await until(() => service.obs.state === 'waiting');
   const obs = service.snapshot().obs;
   assert.strictEqual(obs.enabled, true);
