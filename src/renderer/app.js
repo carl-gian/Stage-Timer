@@ -45,6 +45,7 @@ function paint(d) {
 function paintUpdate(d) {
   const u = d.update;
   $('verLine').textContent = `Version ${d.version}`;
+  $('startHidden').checked = d.settings.startHidden;
   $('autoUpdate').checked = d.settings.autoUpdate;
   const text = {
     unsupported: u.message,
@@ -166,6 +167,7 @@ $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
 for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });
+$('startHidden').onchange = (e) => save({ startHidden: e.target.checked });
 $('autoUpdate').onchange = (e) => save({ autoUpdate: e.target.checked });
 $('checkUpd').onclick = () => window.stage.checkUpdate().then(paint);
 $('installUpd').onclick = () => window.stage.installUpdate();

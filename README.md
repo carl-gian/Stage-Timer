@@ -28,7 +28,7 @@ of sounds or system notifications.
 3. **On-screen timer:** add a *Browser Source* with `http://localhost/display?bg=transparent`.
 4. **Phone or tablet:** scan the QR code (or click **Connect** in the dock) and enter the PIN. On the computer running OBS no PIN is needed.
 
-Closing the window keeps Stage Timer running in the system tray.
+Closing the window keeps Stage Timer running in the system tray. After the first launch it also starts hidden in the tray, without opening the window (click the tray icon to open it, or turn *Start hidden* off under Advanced).
 
 ## Pages
 

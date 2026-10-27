@@ -1,6 +1,10 @@
-# Stage Timer 1.1.4
+# Stage Timer 1.1.5
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.1.5
+
+- **Starts hidden in the background.** Stage Timer now launches into the system tray without opening its window. Click the tray icon to open it, or turn *Start hidden* off under Advanced. A brand-new install still shows the window the first time, and launching the app again while it runs brings the window up.
 
 ## What's new in 1.1.4
 
@@ -31,7 +35,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.1.4.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.1.5.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

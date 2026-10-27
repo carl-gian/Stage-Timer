@@ -26,6 +26,7 @@ class StageService extends EventEmitter {
     this.settingsPath = path.join(dataDir, 'settings.json');
     this.cachePath = path.join(dataDir, 'feed.json');
 
+    this.firstRun = !fs.existsSync(this.settingsPath); // nothing saved yet: a brand-new install
     this.settings = {
       port: 80, // preferred; falls back to 4580 if unavailable
       hostname: 'stage', // reachable as stage.local on the same network
@@ -41,6 +42,7 @@ class StageService extends EventEmitter {
       obsPassword: '',
       obsSettleMs: DEFAULT_SETTLE_MS, // pause between Preview and Transition
       obsScenes: {}, // { midweek: { partKey: sceneName }, weekend: { ... } }
+      startHidden: true, // launch into the tray without opening the window
       autoUpdate: true, // download new versions in the background (installed when the app is quit)
       obsCounselScenes: {}, // per-part counseling scene, same shape as obsScenes
       obsCounselScene: '', // scene after a ministry student talk is stopped (counsel is given); empty = use the default
@@ -212,7 +214,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
@@ -225,6 +227,7 @@ class StageService extends EventEmitter {
     if (!['none', 'oneWay', 'twoWay'].includes(this.settings.adaptiveMode)) this.settings.adaptiveMode = before.adaptiveMode;
 
     this.settings.autoUpdate = this.settings.autoUpdate !== false;
+    this.settings.startHidden = this.settings.startHidden !== false;
     this.settings.obsEnabled = this.settings.obsEnabled === true;
     this.settings.obsPassword = String(this.settings.obsPassword ?? '');
     const url = String(this.settings.obsUrl ?? '').trim();

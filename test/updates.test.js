@@ -97,3 +97,12 @@ test('settings: automatic updates default on and can be turned off', async () =>
   await service.updateSettings({ autoUpdate: true });
   assert.strictEqual(service.settings.autoUpdate, true);
 });
+
+test('settings: start hidden defaults on, and only a new install counts as first run', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const first = new StageService({ dataDir: dir });
+  assert.deepStrictEqual([first.firstRun, first.settings.startHidden], [true, true]);
+  await first.updateSettings({ startHidden: false });
+  const again = new StageService({ dataDir: dir });
+  assert.deepStrictEqual([again.firstRun, again.settings.startHidden], [false, false]);
+});

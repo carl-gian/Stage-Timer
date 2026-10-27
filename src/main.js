@@ -140,7 +140,8 @@ app.whenReady().then(async () => {
   service.on('open-settings', showWindow); // from the OBS dock's gear button
   setupUpdates();
   createTray();
-  createWindow();
+  // Start in the tray with no window, except on a brand-new install so there is something to see.
+  if (!service.settings.startHidden || service.firstRun) createWindow();
 
   ipcMain.handle('info', info);
   ipcMain.handle('update-settings', async (_e, patch) => {
