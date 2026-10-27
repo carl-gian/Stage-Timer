@@ -7,12 +7,16 @@ const { EventEmitter } = require('events');
 const { StageTimer } = require('./timer');
 const { getMeetingForWeek, DEFAULT_FEED_URL } = require('./feed');
 const { buildSchedule, detectMeetingType } = require('./schedule');
+const { ObsClient } = require('./obs');
+const { SceneSwitcher, DEFAULT_SETTLE_MS } = require('./sceneSwitcher');
+
+const MEETING_TYPES = ['midweek', 'weekend'];
 
 const randomPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
 
 /** Owns settings, the schedule and the timer. UI-agnostic so it also runs headless. */
 class StageService extends EventEmitter {
-  constructor({ dataDir, now = () => new Date(), fetchImpl = fetch }) {
+  constructor({ dataDir, now = () => new Date(), fetchImpl = fetch, WebSocketImpl = globalThis.WebSocket }) {
     super();
     this.dataDir = dataDir;
     this.nowDate = now;
@@ -31,12 +35,67 @@ class StageService extends EventEmitter {
       closingSecs: 30,
       adaptiveMode: 'none', // none | oneWay | twoWay
       feedUrl: DEFAULT_FEED_URL,
+      obsEnabled: false, // optional: switch OBS scenes when a part starts
+      obsUrl: 'ws://localhost:4455',
+      obsPassword: '',
+      obsSettleMs: DEFAULT_SETTLE_MS, // pause between Preview and Transition
+      obsScenes: {}, // { midweek: { partKey: sceneName }, weekend: { ... } }
       ...this._readSettings(),
     };
+    if (!this.settings.obsScenes || typeof this.settings.obsScenes !== 'object') this.settings.obsScenes = {};
     this._saveSettings();
 
     this.timer = new StageTimer({ now: () => Date.now(), closingSecs: this.settings.closingSecs, adaptiveMode: this.settings.adaptiveMode });
     this.status = { source: 'none', loading: false };
+
+    this.obs = new ObsClient({ WebSocketImpl });
+    this.switcher = new SceneSwitcher(this.obs, { settleMs: this.settings.obsSettleMs });
+    this.switcher.on('change', () => this.emit('obs'));
+    this.timer.on('part-start', (part) => this._onPartStart(part));
+  }
+
+  /** Timer snapshot plus the little OBS status the control page shows. */
+  snapshot() {
+    return { ...this.timer.snapshot(), obs: { enabled: this.settings.obsEnabled, problem: this.obsProblem } };
+  }
+
+  get obsProblem() {
+    if (!this.settings.obsEnabled) return null;
+    return this.obs.connected ? this.switcher.problem : this.obs.message;
+  }
+
+  /** Everything the settings window needs about the OBS link. */
+  obsInfo() {
+    const { state, message } = this.obs;
+    return { state, message, problem: this.switcher.problem, scenes: this.switcher.scenes, last: this.switcher.last };
+  }
+
+  /** Connects to (or disconnects from) OBS to match the settings. Safe to call repeatedly. */
+  startObs() {
+    this.switcher.settleMs = this.settings.obsSettleMs;
+    if (this.settings.obsEnabled) this.obs.connect({ url: this.settings.obsUrl, password: this.settings.obsPassword });
+    else this.obs.disconnect();
+  }
+
+  stopObs() {
+    this.obs.disconnect();
+  }
+
+  /** Remembers which OBS scene a part uses; an empty scene clears it. */
+  assignScene({ meetingType, key, scene }) {
+    if (!MEETING_TYPES.includes(meetingType) || !/^\w+$/.test(String(key))) return;
+    const forType = { ...this.settings.obsScenes[meetingType] };
+    if (typeof scene === 'string' && scene && scene.length <= 256) forType[key] = scene;
+    else delete forType[key];
+    this.settings.obsScenes = { ...this.settings.obsScenes, [meetingType]: forType };
+    this._saveSettings();
+    this.emit('settings');
+  }
+
+  _onPartStart(part) {
+    if (!this.settings.obsEnabled || !part) return;
+    const scene = (this.settings.obsScenes[this.timer.meta.meetingType] || {})[part.key];
+    if (scene) this.switcher.switchTo(scene);
   }
 
   _readSettings() {
@@ -89,7 +148,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
@@ -100,10 +159,19 @@ class StageService extends EventEmitter {
     if (!/^\d{4,8}$/.test(String(this.settings.pin))) this.settings.pin = before.pin;
     this.settings.pin = String(this.settings.pin);
     if (!['none', 'oneWay', 'twoWay'].includes(this.settings.adaptiveMode)) this.settings.adaptiveMode = before.adaptiveMode;
+
+    this.settings.obsEnabled = this.settings.obsEnabled === true;
+    this.settings.obsPassword = String(this.settings.obsPassword ?? '');
+    const url = String(this.settings.obsUrl ?? '').trim();
+    const withScheme = /^wss?:\/\//i.test(url) ? url : `ws://${url}`;
+    this.settings.obsUrl = /^wss?:\/\/[^\s/]+\S*$/i.test(withScheme) ? withScheme : before.obsUrl;
+    const settle = parseInt(this.settings.obsSettleMs, 10);
+    this.settings.obsSettleMs = Number.isFinite(settle) ? Math.min(2000, Math.max(0, settle)) : before.obsSettleMs;
     this._saveSettings();
 
     this.timer.setClosingSecs(this.settings.closingSecs);
     this.timer.setAdaptiveMode(this.settings.adaptiveMode);
+    this.startObs();
     if (before.meetingMode !== this.settings.meetingMode || before.circuitVisit !== this.settings.circuitVisit) {
       await this.loadSchedule();
     }

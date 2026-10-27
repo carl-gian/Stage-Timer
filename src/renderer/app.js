@@ -37,6 +37,52 @@ function paint(d) {
     $('port').value = d.settings.port;
     $('hostname').value = d.settings.hostname;
   }
+  paintObs(d);
+}
+
+let partsKey = '';
+
+function paintObs(d) {
+  const { obs, settings } = d;
+  $('obsOn').checked = settings.obsEnabled;
+  $('obsBody').style.display = settings.obsEnabled ? '' : 'none';
+
+  let status = obs.message;
+  if (obs.state === 'connected') {
+    status = obs.problem || (obs.last ? `Connected. Last sent: ${obs.last.scene}` + (obs.last.outcome === 'already-live' ? ' (already on air)' : '') : 'Connected');
+  }
+  $('obsStatus').textContent = status;
+  $('obsStatus').classList.toggle('bad-text', obs.state !== 'connected' || !!obs.problem);
+
+  for (const [id, value] of [['obsUrl', settings.obsUrl], ['obsPassword', settings.obsPassword], ['obsSettle', settings.obsSettleMs]]) {
+    if (document.activeElement !== $(id)) $(id).value = value;
+  }
+
+  $('obsHint').textContent = `Scene for each part of the ${d.meetingType === 'weekend' ? 'weekend' : 'midweek'} meeting. Use Meeting type above to set up the other one.`;
+
+  // Rebuilding while a menu is open would close it, so only rebuild when something changed.
+  const assigned = settings.obsScenes[d.meetingType] || {};
+  const key = JSON.stringify([d.parts, obs.scenes, assigned]);
+  if (key === partsKey || document.activeElement.tagName === 'SELECT') return;
+  partsKey = key;
+  $('obsParts').textContent = '';
+  for (const part of d.parts) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const lbl = document.createElement('div');
+    lbl.className = 'lbl';
+    lbl.textContent = part.name;
+    const select = document.createElement('select');
+    const names = [...obs.scenes];
+    const current = assigned[part.key] || '';
+    if (current && !names.includes(current)) names.push(current);
+    select.add(new Option('None', ''));
+    for (const name of names) select.add(new Option(obs.scenes.length && !obs.scenes.includes(name) ? `${name} (not in OBS)` : name, name));
+    select.value = current;
+    select.onchange = () => window.stage.assignScene(part.key, select.value).then(paint);
+    row.append(lbl, select);
+    $('obsParts').append(row);
+  }
 }
 
 const refresh = () => window.stage.info().then(paint);
@@ -51,6 +97,8 @@ document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => save
 document.querySelectorAll('#adaptive button').forEach((b) => (b.onclick = () => save({ adaptiveMode: b.dataset.v })));
 $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
+$('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
+for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });
 $('newPin').onclick = () => window.stage.regeneratePin().then(paint);
 $('refresh').onclick = () => { $('schedDesc').textContent = 'Downloading…'; window.stage.refreshSchedule().then(paint); };
 for (const id of ['port', 'hostname']) {

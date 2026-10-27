@@ -43,6 +43,8 @@ async function info() {
     meetingType: service.meetingType,
     schedule: { source: service.timer.meta.scheduleSource, error: service.timer.meta.scheduleError, count: service.timer.items.length },
     timer: { running: service.timer.running, talk: service.timer.current && service.timer.current.name },
+    obs: service.obsInfo(),
+    parts: service.timer.items.map((i) => ({ key: i.key, name: i.name, section: i.sectionTitle })),
     version: app.getVersion(),
   };
 }
@@ -95,6 +97,7 @@ function createTray() {
 app.whenReady().then(async () => {
   service = new StageService({ dataDir: app.getPath('userData') });
   await service.loadSchedule();
+  service.startObs();
   await startServer();
   service.on('open-settings', showWindow); // from the OBS dock's gear button
   createTray();
@@ -111,6 +114,10 @@ app.whenReady().then(async () => {
     await service.regeneratePin();
     return info();
   });
+  ipcMain.handle('assign-scene', async (_e, key, scene) => {
+    service.assignScene({ meetingType: service.timer.meta.meetingType, key, scene });
+    return info();
+  });
   ipcMain.handle('refresh-schedule', async () => {
     await service.loadSchedule({ force: true });
     return info();
@@ -122,6 +129,9 @@ app.whenReady().then(async () => {
 });
 
 app.on('activate', showWindow); // macOS dock click
-app.on('before-quit', () => { quitting = true; });
+app.on('before-quit', () => {
+  quitting = true;
+  if (service) service.stopObs();
+});
 // Stay alive in the tray when all windows are closed (window close is intercepted anyway).
 app.on('window-all-closed', () => {});

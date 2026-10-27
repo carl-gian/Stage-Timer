@@ -79,9 +79,11 @@ class StageTimer extends EventEmitter {
 
   start() {
     if (!this.current || this.running) return;
+    const beginning = this.base === 0; // resuming after a pause is not the start of the part
     this._refreshAdaptive({ starting: true });
     this.startedAt = this.now();
     this._changed();
+    if (beginning) this.emit('part-start', this.current);
   }
 
   pause() {

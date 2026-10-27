@@ -79,10 +79,11 @@ function createServer(service, { mdns: useMdns = true } = {}) {
   }
 
   const broadcast = () => {
-    const msg = `data: ${JSON.stringify(service.timer.snapshot())}\n\n`;
+    const msg = `data: ${JSON.stringify(service.snapshot())}\n\n`;
     for (const c of clients) c.write(msg);
   };
   service.timer.on('change', broadcast);
+  service.on('obs', broadcast);
   // Heartbeat: keeps connections alive and re-syncs clocks of any client that drifted.
   const heartbeat = setInterval(() => clients.size && broadcast(), 1000);
 
@@ -105,12 +106,12 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       return res.end();
     }
 
-    if (req.method === 'GET' && p === '/api/state') return send(res, 200, service.timer.snapshot());
+    if (req.method === 'GET' && p === '/api/state') return send(res, 200, service.snapshot());
     if (req.method === 'GET' && p === '/api/whoami') return send(res, 200, { pinRequired: pinRequired(req), local: isLoopback(req.socket.remoteAddress) });
 
     if (req.method === 'GET' && p === '/api/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'Access-Control-Allow-Origin': '*' });
-      res.write(`data: ${JSON.stringify(service.timer.snapshot())}\n\n`);
+      res.write(`data: ${JSON.stringify(service.snapshot())}\n\n`);
       clients.add(res);
       req.on('close', () => clients.delete(res));
       return;
@@ -140,7 +141,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       if (!authorised(req, res)) return;
       const body = await readBody(req);
       await commands[m[1]](body);
-      return send(res, 200, service.timer.snapshot());
+      return send(res, 200, service.snapshot());
     }
 
     if (req.method === 'GET') {
@@ -213,6 +214,8 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     },
     async close() {
       clearInterval(heartbeat);
+      service.timer.off('change', broadcast);
+      service.off('obs', broadcast);
       for (const c of clients) c.end();
       if (mdns) await mdns.stop();
       mdns = null;

@@ -10,6 +10,7 @@ const { createServer } = require('./core/server');
   const dataDir = process.env.STAGETIMER_DATA || path.join(os.homedir(), '.stagetimer');
   const service = new StageService({ dataDir });
   await service.loadSchedule();
+  service.startObs();
   const server = createServer(service);
   await server.start(service.settings.port);
   const u = server.urls();

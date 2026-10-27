@@ -128,6 +128,7 @@
 
 <div class="banner" id="banner"></div>
 <div class="banner pace" id="pace"></div>
+<div class="banner" id="obsBanner"></div>
 
 <section class="clock" id="clock" data-state="idle">
   <div class="popup" id="popup"></div>
@@ -262,6 +263,9 @@
       banner.innerHTML = 'Couldn’t download this week’s schedule — using default times. <button id="retry">Try again</button>';
       $('retry').onclick = () => api('refresh');
     } else banner.style.display = 'none';
+    const obsProblem = state.obs && state.obs.enabled ? state.obs.problem : null;
+    $('obsBanner').style.display = obsProblem ? 'block' : 'none';
+    $('obsBanner').textContent = obsProblem ? 'OBS scenes: ' + obsProblem : '';
     const pace = $('pace');
     const o = state.overrunSecs;
     if (o != null) {

@@ -16,6 +16,7 @@ of sounds or system notifications.
 - **Display page.** A big, readable timer for any screen, or an OBS Browser Source with a transparent background.
 - **Easy links.** `http://stage.local/display`: no IP address or port to type.
 - **Warnings you can see from the back of the room.** Amber glow with one minute left, flashing amber from 30 s, flashing red from 10 s, then a flashing "Time's up" pop-up.
+- **OBS scene switching** (optional). Give each part an OBS scene; when the part starts, the scene is sent to OBS Preview and then Transitioned, like pressing the button in Studio Mode. See [OBS scene switching](#obs-scene-switching-optional).
 - **Adaptive timing** (optional). If the meeting runs early or late, later parts are shortened or lengthened in proportion.
 
 ## Quick start
@@ -44,6 +45,21 @@ Closing the window keeps Stage Timer running in the system tray.
   - 10 seconds: flashing red
   - Time's up: flashing pop-up for 15 seconds, then steady red while over time
 - **Adaptive timing** is off by default (Settings: Off / Shorten / Both). When on, the difference between the clock and the planned end of the meeting is shared across the remaining adaptive parts (the "Living as Christians" parts, the Congregation Bible Study and the weekend talks after the first) in proportion to their length.
+
+## OBS scene switching (optional)
+
+Off by default. When on, starting a part puts its scene on air using OBS Studio Mode: **Set Preview scene → short wait → Transition**. It goes through Preview, rather than jumping straight to Program, so tools that react to Preview and the Transition button (such as the EMEET-OBS Bridge, which moves the camera) behave exactly as if you had pressed Transition yourself. Stage Timer never changes the transition itself.
+
+1. In OBS: turn on **Studio Mode**, and under *Tools → WebSocket Server Settings* enable the server (note the port and password).
+2. In Stage Timer's window, open **OBS scenes**, tick *Switch scenes automatically*, and enter the address (default `ws://localhost:4455`) and password.
+3. Pick a scene for each part. Scenes are listed from OBS, so names always match exactly. Parts left on *None* are never touched.
+
+Details worth knowing:
+
+- Only the **start** of a part switches scenes. Resuming after a pause does not, and a scene that is already on air is left alone.
+- **Wait before Transition** (default 300 ms) gives another program time to react to the new Preview scene and pick its transition. If the wait is too short, OBS uses the previous transition. The wait ends early, after a short grace, as soon as OBS reports that the transition changed. Tune it on your own setup.
+- Switches never overlap: if you start another part while a transition is running, it waits for the transition to end, and only the most recent request runs.
+- Problems (OBS not running, wrong password, Studio Mode off, a scene that no longer exists) show in the settings window and as a banner in the control page and dock. The timer itself is never held up by OBS.
 
 ## Links, ports and networking
 
@@ -83,7 +99,7 @@ npm run dist       # build an installer for the current OS
 Releases are built by GitHub Actions: pushing a tag like `v1.0.1` builds the Windows installer and attaches it to a release.
 
 ```
-src/core/      timer, schedule, feed download, adaptive timing, HTTP server, mDNS
+src/core/      timer, schedule, feed download, adaptive timing, HTTP server, mDNS, OBS scene switching
 src/main.js    Electron main process (tray, settings window)
 src/renderer/  settings window
 web/           display and control pages
