@@ -77,8 +77,16 @@ class StageService extends EventEmitter {
     });
     this.reports.save(report);
     this.latestReport = this.reports.list()[0];
-    this.emit('report');
+    this.emit('report', report);
     return report;
+  }
+
+  /** Remembers where a report's PDF was saved. */
+  attachPdf(id, pdfPath) {
+    const report = this.reports.get(id);
+    if (!report) return;
+    this.reports.save({ ...report, pdfPath });
+    this.latestReport = this.reports.list()[0];
   }
 
   get obsProblem() {

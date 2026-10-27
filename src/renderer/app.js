@@ -139,7 +139,14 @@ function paintReports(d) {
     const open = document.createElement('button');
     open.textContent = 'Open';
     open.onclick = () => window.stage.open(`${data.urls.reportLocal}?id=${encodeURIComponent(r.id)}`);
-    row.append(lbl, open);
+    row.append(lbl);
+    if (r.pdfPath) {
+      const pdf = document.createElement('button');
+      pdf.textContent = 'PDF';
+      pdf.onclick = () => window.stage.openReportPdf(r.id);
+      row.append(pdf);
+    }
+    row.append(open);
     $('reports').append(row);
   }
 }
@@ -161,6 +168,7 @@ for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'],
 $('autoUpdate').onchange = (e) => save({ autoUpdate: e.target.checked });
 $('checkUpd').onclick = () => window.stage.checkUpdate().then(paint);
 $('installUpd').onclick = () => window.stage.installUpdate();
+$('openReports').onclick = () => window.stage.openReportsFolder();
 $('makeReport').onclick = () => window.stage.makeReport().then(paint);
 $('newPin').onclick = () => window.stage.regeneratePin().then(paint);
 $('refresh').onclick = () => { $('schedDesc').textContent = 'Downloading…'; window.stage.refreshSchedule().then(paint); };

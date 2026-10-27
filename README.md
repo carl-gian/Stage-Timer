@@ -17,7 +17,7 @@ of sounds or system notifications.
 - **Easy links.** `http://stage.local/display`: no IP address or port to type.
 - **Warnings you can see from the back of the room.** Amber glow with one minute left, flashing amber from 30 s, flashing red from 10 s, then a flashing "Time's up" pop-up.
 - **OBS scene switching** (optional). Give each part an OBS scene; when the part starts, the scene is sent to OBS Preview and then Transitioned, like pressing the button in Studio Mode. See [OBS scene switching](#obs-scene-switching-optional).
-- **Timer report.** When the Congregation Bible Study or Watchtower Study is stopped, a report of every part's over and under time is saved and shown on a printable page.
+- **Timer report.** When the Congregation Bible Study or Watchtower Study is stopped, a report of every part's over and under time is saved, shown on a printable page, and saved as a PDF.
 - **Automatic updates.** New versions download in the background and install when you quit. It never restarts by itself.
 - **Adaptive timing** (optional). If the meeting runs early or late, later parts are shortened or lengthened in proportion.
 
@@ -72,7 +72,8 @@ A report is saved when the **Congregation Bible Study** (midweek) or the **Watch
 - Over and under are measured against the time the clock was actually counting to, so any ±30 s / ±1 min adjusting or adaptive timing is taken into account. The report shows a *Target* column when any part differed from plan.
 - Open it from the **Report** button in the control page and dock, or from the *Timer reports* card in Stage Timer's window, which also has **Make a report now** (handy for a circuit visit week, when the Bible Study isn't held).
 - A part only counts as timed when you press **Stop** on it (Pause alone does not).
-- Reports are saved as small files in the app's data folder (`reports/`), so earlier weeks stay available.
+- Each report is also saved as a PDF named like `MIDWEEK Time Report 10-27-2026.pdf` (or `WEEKEND …`; month-day-year) in **Documents → Stage Timer Reports**. A second report on the same day gets `(2)` added rather than replacing the first. Use *Open PDF folder* in the app window to find them.
+- Reports are also kept as small data files in the app's data folder (`reports/`), so earlier weeks stay available on the report page.
 
 ## Updates
 

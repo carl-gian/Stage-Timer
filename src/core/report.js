@@ -56,6 +56,12 @@ function reportId(date, meetingType) {
   return `${d}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${meetingType}`;
 }
 
+/** "MIDWEEK Time Report 10-27-2026.pdf": meeting type and the local date, month first. */
+function pdfName(report) {
+  const d = new Date(report.createdAt);
+  return `${report.meetingType.toUpperCase()} Time Report ${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${d.getFullYear()}.pdf`;
+}
+
 const isReportId = (id) => /^[\w-]{1,60}$/.test(String(id));
 
 /** Reports live as one small JSON file each, in <dataDir>/reports. */
@@ -96,7 +102,7 @@ class ReportStore {
 }
 
 function summary(r) {
-  return { id: r.id, createdAt: r.createdAt, meetingType: r.meetingType, trigger: r.trigger, diffSecs: r.totals.diffSecs, timedParts: r.totals.timedParts };
+  return { id: r.id, createdAt: r.createdAt, meetingType: r.meetingType, trigger: r.trigger, pdfPath: r.pdfPath || null, diffSecs: r.totals.diffSecs, timedParts: r.totals.timedParts };
 }
 
-module.exports = { buildReport, ReportStore, REPORT_AFTER, isReportId, summary };
+module.exports = { buildReport, ReportStore, REPORT_AFTER, isReportId, summary, pdfName };

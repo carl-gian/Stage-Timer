@@ -1,11 +1,14 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage } = require('electron');
 const QRCode = require('qrcode');
 const { StageService } = require('./core/service');
 const { createServer } = require('./core/server');
 const { UpdateManager } = require('./core/updates');
+const { pdfName } = require('./core/report');
+const { renderPdf, uniquePath } = require('./pdf');
 
 let service, server, win, tray, updates;
 let serverError = null;
@@ -50,6 +53,18 @@ async function info() {
     version: app.getVersion(),
     update: updates ? updates.status() : null,
   };
+}
+
+const reportsDir = () => path.join(app.getPath('documents'), 'Stage Timer Reports');
+
+/** Saves a report as e.g. "MIDWEEK Time Report 10-27-2026.pdf" in Documents/Stage Timer Reports. */
+async function savePdf(report) {
+  if (!server || serverError) return;
+  fs.mkdirSync(reportsDir(), { recursive: true });
+  const pdf = await renderPdf(BrowserWindow, `${server.urls().reportLocal}?id=${encodeURIComponent(report.id)}`);
+  const file = uniquePath(reportsDir(), pdfName(report));
+  fs.writeFileSync(file, pdf);
+  service.attachPdf(report.id, file);
 }
 
 function setupUpdates() {
@@ -111,6 +126,7 @@ app.whenReady().then(async () => {
   await service.loadSchedule();
   service.startObs();
   await startServer();
+  service.on('report', (report) => savePdf(report).catch((err) => console.error('Could not save the report PDF:', err)));
   service.on('open-settings', showWindow); // from the OBS dock's gear button
   setupUpdates();
   createTray();
@@ -134,6 +150,15 @@ app.whenReady().then(async () => {
   ipcMain.handle('make-report', async () => {
     service.makeReport();
     return info();
+  });
+  ipcMain.handle('open-report-pdf', (_e, id) => {
+    const file = service.reports.get(id)?.pdfPath;
+    // only ever open a file inside the reports folder
+    if (file && path.dirname(file) === reportsDir() && fs.existsSync(file)) shell.openPath(file);
+  });
+  ipcMain.handle('open-reports-folder', () => {
+    fs.mkdirSync(reportsDir(), { recursive: true });
+    shell.openPath(reportsDir());
   });
   ipcMain.handle('check-update', async () => {
     await updates.check();

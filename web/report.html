@@ -55,6 +55,7 @@
   function draw(list, r) {
     const app = document.getElementById('app');
     app.textContent = '';
+    document.body.dataset.ready = '1';
     if (!r) { app.append($('div', 'empty', 'No timer report yet. One is made when the Congregation Bible Study or Watchtower Study is stopped.')); return; }
 
     const when = new Date(r.createdAt);

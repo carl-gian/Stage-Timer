@@ -1,6 +1,10 @@
-# Stage Timer 1.1.2
+# Stage Timer 1.1.3
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.1.3
+
+- **Timer reports are saved as PDFs.** When a report is made, Stage Timer also saves it as `MIDWEEK Time Report 10-27-2026.pdf` (or `WEEKEND Time Report …`, month-day-year) in **Documents → Stage Timer Reports**. Open the PDF, or the folder, from the *Timer reports* card in the app window. A second report on the same day is saved alongside the first as `(2)`.
 
 ## What's new in 1.1.2
 
@@ -9,7 +13,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 - **Automatic updates.** New versions download quietly in the background and install when you quit the app. It never restarts by itself, and not while the timer is running. Turn it off or check by hand under *Updates* in the app window.
 - Fixed: the **Open** buttons in the app window did nothing when the app was using port 80.
 
-**Updating from 1.1.1 or earlier:** install this version by hand once. From then on, updates arrive automatically.
+**Updating from 1.1.1 or earlier:** install version 1.1.2 or later by hand once. From then on, updates arrive automatically.
 
 ## What's new in 1.1
 
@@ -21,7 +25,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.1.2.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.1.3.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

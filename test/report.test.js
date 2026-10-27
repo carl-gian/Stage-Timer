@@ -169,3 +169,25 @@ test('default scene: stopping a part shows it, unless it is already on air or no
   await service.updateSettings({ obsEnabled: false });
   await fake.close();
 });
+
+test('pdf: file names, never overwriting, and the saved path is remembered', async () => {
+  const { pdfName } = require('../src/core/report');
+  const { uniquePath } = require('../src/pdf');
+  assert.strictEqual(pdfName({ meetingType: 'midweek', createdAt: new Date(2026, 9, 27, 20, 5).toISOString() }), 'MIDWEEK Time Report 10-27-2026.pdf');
+  assert.strictEqual(pdfName({ meetingType: 'weekend', createdAt: new Date(2026, 0, 4, 11, 0).toISOString() }), 'WEEKEND Time Report 01-04-2026.pdf');
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const first = uniquePath(dir, 'MIDWEEK Time Report 10-27-2026.pdf');
+  assert.strictEqual(path.basename(first), 'MIDWEEK Time Report 10-27-2026.pdf');
+  fs.writeFileSync(first, 'x');
+  assert.strictEqual(path.basename(uniquePath(dir, 'MIDWEEK Time Report 10-27-2026.pdf')), 'MIDWEEK Time Report 10-27-2026 (2).pdf');
+
+  const { service, run } = await midweek();
+  let announced;
+  service.on('report', (r) => (announced = r));
+  run('study', 1800);
+  assert.strictEqual(announced.id, service.latestReport.id); // the event carries the report, for the PDF writer
+  service.attachPdf(announced.id, first);
+  assert.strictEqual(service.reports.list()[0].pdfPath, first);
+  assert.strictEqual(service.reports.get(announced.id).totals.timedParts, 1); // rest of the report untouched
+});
