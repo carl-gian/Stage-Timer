@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "Meeting stage timer with OBS dock and web control",
   "main": "src/main.js",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
     "start": "electron .",
     "serve": "node src/cli.js",
