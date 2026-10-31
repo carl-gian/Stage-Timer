@@ -54,13 +54,13 @@ Closing the window keeps Stage Timer running in the system tray. After the first
 
 ## Pages
 
-The control page, as used on a phone or tablet or as a full browser tab:
+The control page works on a phone, a tablet, or a laptop browser tab:
 
-![The control page with Start, Pause, Reset, time adjustments and the list of parts](docs/images/control-page.webp)
+![The control page on a phone and on a laptop, both showing the running part with Stop, Pause, Reset and time adjustments](docs/images/control-devices.png)
 
-The display, shown fullscreen on a monitor or TV:
+The display works on any screen: a TV, a monitor, or a laptop:
 
-![The display page: part name, a big countdown and a progress bar](docs/images/display-fullscreen.webp)
+![The display page on a TV and on a laptop, each showing the part name, a big countdown and a progress bar](docs/images/display-devices.png)
 
 | Page | Use |
 |---|---|
