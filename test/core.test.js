@@ -164,3 +164,39 @@ test('http api: PIN, commands, state', async () => {
   for (const page of ['/display', '/control', '/dock']) assert.strictEqual((await fetch(base + page)).status, 200);
   await server.close();
 });
+
+test('a new day: the right meeting is loaded, but never while a part is running or paused', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  let today = new Date(2026, 9, 31, 12); // Saturday
+  const offline = async () => { throw new Error('offline'); };
+  const service = new StageService({ dataDir: dir, now: () => today, fetchImpl: offline });
+  await service.loadSchedule();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+
+  service.timer.select(2);
+  today = new Date(2026, 10, 1, 12); // Sunday: still the weekend meeting, left as it is
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.currentId, 2);
+
+  today = new Date(2026, 10, 2, 12); // Monday: midweek, but a part is under way
+  service.timer.start();
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+  await new Promise((r) => setTimeout(r, 20)); // some time on the clock before the pause
+  service.timer.pause();
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+  service.timer.reset();
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'midweek');
+
+  // Midweek chosen by hand: a new week still brings that week's parts.
+  await service.updateSettings({ meetingMode: 'midweek' });
+  service.timer.select(3);
+  today = new Date(2026, 10, 3, 12); // Tuesday, same week
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.currentId, 3);
+  today = new Date(2026, 10, 9, 12); // next Monday
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.currentId, 1);
+});

@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const { StageTimer } = require('./timer');
 const { getMeetingForWeek, DEFAULT_FEED_URL } = require('./feed');
-const { buildSchedule, detectMeetingType } = require('./schedule');
+const { buildSchedule, detectMeetingType, mondayKey } = require('./schedule');
 const { ObsClient } = require('./obs');
 const { SceneSwitcher, DEFAULT_SETTLE_MS } = require('./sceneSwitcher');
 const { buildReport, ReportStore, REPORT_AFTER } = require('./report');
@@ -184,6 +184,7 @@ class StageService extends EventEmitter {
   /** Builds the schedule for the current meeting type (downloading the feed for midweek). */
   async loadSchedule({ force = false } = {}) {
     const type = this.meetingType;
+    this.loadedFor = this._scheduleKey();
     this.status = { ...this.status, loading: true };
     let meeting = null;
     let source = 'n/a';
@@ -211,6 +212,21 @@ class StageService extends EventEmitter {
       scheduleError: error || null,
     });
     this.emit('settings');
+  }
+
+  /** Which meeting and week the schedule is for: a change means a different set of parts. */
+  _scheduleKey() {
+    return `${this.meetingType} ${mondayKey(this.nowDate())}`;
+  }
+
+  /**
+   * Called every minute: the app can stay in the tray for days, so when the day brings a different meeting or a new
+   * week, that schedule is loaded. Never while a part is running or paused; it is tried again on the next call.
+   */
+  async refreshForToday() {
+    if (this.status.loading || this._scheduleKey() === this.loadedFor) return;
+    if (this.timer.running || this.timer.elapsedMs() > 0) return;
+    await this.loadSchedule();
   }
 
   async updateSettings(patch) {

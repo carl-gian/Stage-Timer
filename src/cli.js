@@ -10,6 +10,7 @@ const { createServer } = require('./core/server');
   const dataDir = process.env.STAGETIMER_DATA || path.join(os.homedir(), '.stagetimer');
   const service = new StageService({ dataDir });
   await service.loadSchedule();
+  setInterval(() => service.refreshForToday(), 60 * 1000); // a new day may bring a different meeting
   service.startObs();
   const server = createServer(service);
   await server.start(service.settings.port);
