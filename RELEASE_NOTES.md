@@ -1,6 +1,16 @@
-# Stage Timer 1.1.5
+# Stage Timer 1.2.0
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.2.0
+
+- **A new, calmer look.** The control page, the speaker's screen and the app window have a fresh design with the Noto Sans font (built in, so it works offline).
+  - On a laptop, the control page shows three columns: the meeting's parts on the left, the timer in the middle, and on the right exactly what the speaker sees. On a tablet it shows two columns, and on a phone or in the OBS dock, one.
+  - The app window now has a side menu (Overview, Meeting, OBS, Reports, Updates, Advanced) instead of one long page.
+  - The speaker's screen stays dark, with clearer colours. The warnings work exactly as before.
+- **Show the current time** (off by default). Turn it on under *Meeting → Clock*. The time of day appears on the control page, with when the meeting should end, and on the speaker's screen between parts, with the next part below it. While someone is speaking, the screen shows only their countdown. Choose a 12-hour (7:30 PM) or 24-hour (19:30) clock.
+- **Theme.** Under *Advanced*, choose Auto (follows Windows), Light or Dark for the control page and the app window. The speaker's screen and the OBS dock are always dark, so they never glare.
+- **The meeting changes with the day.** When the app is left running, it now switches between the midweek and weekend meeting by itself within a few seconds of the day changing, and loads the new week's parts. It never switches while a part is running or paused.
 
 ## What's new in 1.1.5
 
@@ -35,7 +45,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.1.5.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.2.0.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 
@@ -50,6 +60,7 @@ The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choos
 - **Stop moves on.** Stopping a part records how long it took and lines up the next one. Pause keeps your place.
 - **OBS scene switching** (off by default). See above.
 - **Adaptive timing** (off by default). When the meeting runs early or late, later parts are shortened (or lengthened) in proportion. Choose Off / Shorten / Both in Settings.
+- **Current time** (off by default), in a 12- or 24-hour clock, and a Light / Dark / Auto theme. See above.
 - Lives in the system tray; closing the window keeps the timer running.
 
 ## Getting started

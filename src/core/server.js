@@ -9,7 +9,7 @@ const QRCode = require('qrcode');
 const { advertise } = require('./mdns');
 
 const WEB_DIR = path.join(__dirname, '..', '..', 'web');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const PAGES = { '/': 'control.html', '/control': 'control.html', '/dock': 'control.html', '/display': 'display.html', '/report': 'report.html' };
 
 const isLoopback = (addr = '') => addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
@@ -156,7 +156,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     }
 
     if (req.method === 'GET') {
-      const file = PAGES[p] || (/^\/[\w.-]+\.(css|js|png|svg)$/.test(p) ? p.slice(1) : null);
+      const file = PAGES[p] || (/^\/[\w.-]+\.(css|js|png|svg|woff2)$/.test(p) ? p.slice(1) : null);
       if (file) {
         try {
           const data = fs.readFileSync(path.join(WEB_DIR, file));

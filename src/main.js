@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage, nativeTheme } = require('electron');
 const QRCode = require('qrcode');
 const { StageService } = require('./core/service');
 const { createServer } = require('./core/server');
@@ -95,12 +95,12 @@ function showWindow() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 560,
-    height: 760,
-    minWidth: 480,
-    minHeight: 560,
+    width: 1000,
+    height: 720,
+    minWidth: 640,
+    minHeight: 520,
     title: 'Stage Timer',
-    backgroundColor: '#0b0e14',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#121a2b' : '#ffffff', // matches the page, so opening doesn't flash
     autoHideMenuBar: true,
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'renderer', 'preload.js'), contextIsolation: true, nodeIntegration: false },
@@ -134,10 +134,14 @@ function createTray() {
 app.whenReady().then(async () => {
   service = new StageService({ dataDir: app.getPath('userData') });
   await service.loadSchedule();
+  setInterval(() => service.refreshForToday(), 5 * 1000); // the app can stay in the tray for days; a cheap check
   service.startObs();
   await startServer();
   service.on('report', (report) => savePdf(report).catch((err) => console.error('Could not save the report PDF:', err)));
   service.on('open-settings', showWindow); // from the OBS dock's gear button
+  const applyTheme = () => (nativeTheme.themeSource = service.settings.theme === 'auto' ? 'system' : service.settings.theme);
+  applyTheme();
+  service.on('settings', applyTheme);
   setupUpdates();
   createTray();
   // Start in the tray with no window, except on a brand-new install so there is something to see.

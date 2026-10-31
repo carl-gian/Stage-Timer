@@ -33,6 +33,13 @@
     return (h ? h + ':' : '') + mm + ':' + String(sec).padStart(2, '0');
   };
 
+  // Time of day, e.g. { time: '7:05', ampm: 'PM' } (12h) or { time: '19:05', ampm: '' } (24h).
+  ST.clockTime = function (d, format) {
+    const m = String(d.getMinutes()).padStart(2, '0');
+    if (format === '24h') return { time: String(d.getHours()).padStart(2, '0') + ':' + m, ampm: '' };
+    return { time: (d.getHours() % 12 || 12) + ':' + m, ampm: d.getHours() < 12 ? 'AM' : 'PM' };
+  };
+
   // Everything a view needs to draw the clock.
   // state: idle | stopped | running | minute (glow) | half (flash amber) | ten (flash red) | up (time's up) | over
   ST.view = function (s, offset) {
@@ -96,5 +103,6 @@
     }
   };
 
-  window.ST = ST;
+  if (typeof window !== 'undefined') window.ST = ST;
+  if (typeof module !== 'undefined') module.exports = ST; // for the tests
 })();

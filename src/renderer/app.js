@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 let data = null;
 let editing = false;
 
-const SOURCE = { network: 'Downloaded just now', cache: 'Loaded from saved copy', 'stale-cache': 'Offline — using saved copy', none: 'Couldn’t download — using default times', 'n/a': 'Fixed times (no download needed)' };
+const SOURCE = { pending: 'Downloading this week’s parts…', network: 'Downloaded just now', cache: 'Loaded from saved copy', 'stale-cache': 'Offline — using saved copy', none: 'Couldn’t download — using default times', 'n/a': 'Fixed times (no download needed)' };
 
 const AD_DESC = {
   none: 'Parts always use their planned time',
@@ -22,6 +22,7 @@ function paint(d) {
   $('uDisplay').textContent = d.urls.display;
   $('uControl').textContent = d.urls.control;
   $('uDock').textContent = d.urls.dock;
+  $('uDockObs').textContent = d.urls.dock;
   $('qr').src = d.qr;
   $('pin').textContent = d.settings.pin;
   document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.meetingMode));
@@ -29,6 +30,10 @@ function paint(d) {
   document.querySelectorAll('#adaptive button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.adaptiveMode));
   $('adDesc').textContent = AD_DESC[d.settings.adaptiveMode] || '';
   $('circuit').checked = d.settings.circuitVisit;
+  $('showClock').checked = d.settings.showClock;
+  document.querySelectorAll('#theme button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.theme));
+  document.querySelectorAll('#clockFormat button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.clockFormat));
+  $('clockDesc').textContent = d.settings.clockFormat === '24h' ? 'For example 19:30' : 'For example 7:30 PM';
   $('localNoPin').checked = d.settings.localNoPin;
   $('schedDesc').textContent = `${d.schedule.count} parts · ${SOURCE[d.schedule.source] || ''}`;
   $('hostDesc').textContent = d.friendlyName ? `Other devices open ${d.friendlyName}` : 'Not available on this network — use the IP link';
@@ -82,7 +87,7 @@ function paintObs(d) {
     if (document.activeElement !== $(id)) $(id).value = value;
   }
 
-  $('obsHint').textContent = `Scene for each part of the ${d.meetingType === 'weekend' ? 'weekend' : 'midweek'} meeting. Use Meeting type above to set up the other one.`;
+  $('obsHint').textContent = `Scene for each part of the ${d.meetingType === 'weekend' ? 'weekend' : 'midweek'} meeting. Change Meeting type (under Meeting) to set up the other one.`;
 
   // Rebuilding while a menu is open would close it, so only rebuild when something changed.
   const assigned = settings.obsScenes[d.meetingType] || {};
@@ -153,6 +158,15 @@ function paintReports(d) {
   }
 }
 
+// Side menu: one section at a time, under one banner of art
+$('heroArt').innerHTML = platformArt({ w: 1600, h: 380, cx: 1150, crowd: false, dark: '#164e57', mid: '#a9d6d9', light: '#eaf5f5', id: 'hero' });
+document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((n) => (n === b ? n.setAttribute('aria-current', 'page') : n.removeAttribute('aria-current')));
+  document.querySelectorAll('section').forEach((s) => s.classList.toggle('on', s.dataset.sec === b.dataset.sec));
+  $('secTitle').textContent = b.textContent;
+  document.querySelector('main').scrollTop = 0;
+}));
+
 const refresh = () => window.stage.info().then(paint);
 const save = (patch) => window.stage.update(patch).then(paint);
 
@@ -164,6 +178,9 @@ document.querySelectorAll('[data-open]').forEach((b) => (b.onclick = () => windo
 document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => save({ meetingMode: b.dataset.v })));
 document.querySelectorAll('#adaptive button').forEach((b) => (b.onclick = () => save({ adaptiveMode: b.dataset.v })));
 $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
+$('showClock').onchange = (e) => save({ showClock: e.target.checked });
+document.querySelectorAll('#clockFormat button').forEach((b) => (b.onclick = () => save({ clockFormat: b.dataset.v })));
+document.querySelectorAll('#theme button').forEach((b) => (b.onclick = () => save({ theme: b.dataset.v })));
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
 for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });

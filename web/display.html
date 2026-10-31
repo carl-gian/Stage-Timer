@@ -4,29 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stage Timer Display</title>
+<link rel="stylesheet" href="/steward.css">
 <style>
-  /* Options (URL query):  ?bg=transparent  ?name=0  ?bar=0  ?mode=elapsed  */
-  :root { --ok:#3ddc84; --warn:#ffb020; --bad:#ff4d4d; --dim:#8a93a6; --fg:#fff; }
+  /* Options (URL query):  ?bg=transparent  ?name=0  ?bar=0  ?mode=elapsed
+     Always dark (class "stage" in steward.css): a white screen glares on stage and over OBS video. Never coral here. */
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    background: #0b0e14; color: var(--fg); overflow: hidden;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin;
+    background: var(--page); color: var(--text); overflow: hidden;
+    font-family: var(--font); -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2vmin;
   }
   body.transparent { background: transparent; }
-  .name { font-size: 5vmin; color: var(--dim); letter-spacing: .02em; text-align: center; padding: 0 4vw; }
-  .section { font-size: 2.6vmin; color: var(--dim); text-transform: uppercase; letter-spacing: .14em; opacity: .8; }
-  .time { font-size: 30vmin; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; transition: color .2s; }
-  .bar { width: 70vw; height: 2.2vmin; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
-  .bar > i { display: block; height: 100%; width: 0; background: var(--ok); transition: background .2s; }
+  .section { font-size: 2.6vmin; color: var(--brand); text-transform: uppercase; letter-spacing: .16em; font-weight: var(--weight-bold); }
+  .name { font-size: 5vmin; color: var(--text-dim); font-weight: var(--weight-medium); text-align: center; padding: 0 4vw; }
+  .time { font-size: 30vmin; font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color .2s; }
+  .bar { width: 70vw; height: 1.6vmin; background: var(--surface); border-radius: 99px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--brand); transition: background .2s; }
 
-  /* Colour by stage */
-  [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--dim); }
-  [data-state="minute"] .time, [data-state="half"] .time { color: var(--warn); }
-  [data-state="ten"] .time, [data-state="up"] .time, [data-state="over"] .time { color: var(--bad); }
+  /* Current time between parts (Settings → Clock) */
+  .time small { font-size: 9vmin; color: var(--text-dim); margin-left: 1.5vmin; font-weight: var(--weight-bold); letter-spacing: 0; }
+  .up { font-size: 4.2vmin; color: var(--text-dim); text-align: center; padding: 0 4vw; display: none; }
+  .up b { color: var(--text); font-weight: var(--weight-bold); }
+  body.now .time { color: var(--text); font-weight: var(--weight-bold); }
+  body.now .up { display: block; }
+  body.now .name, body.now .bar { display: none; }
+
+  /* Colour by stage (red stays darker than amber, so they differ in brightness too) */
+  [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--text-dim); }
+  [data-state="minute"] .time, [data-state="half"] .time { color: var(--warn-text); }
+  [data-state="ten"] .time, [data-state="up"] .time, [data-state="over"] .time { color: var(--danger-text); }
   [data-state="minute"] .bar > i, [data-state="half"] .bar > i { background: var(--warn); }
-  [data-state="ten"] .bar > i, [data-state="up"] .bar > i, [data-state="over"] .bar > i { background: var(--bad); }
+  [data-state="ten"] .bar > i, [data-state="up"] .bar > i, [data-state="over"] .bar > i { background: var(--danger); }
 
   /* Motion by stage: slow amber glow -> amber flash -> faster red flash -> flashing time's up */
   [data-state="stopped"] .time { animation: dim 1.4s ease-in-out infinite; }
@@ -36,36 +45,43 @@
   [data-state="up"] .time { animation: flash .7s ease-in-out infinite; }
   @keyframes dim { 50% { opacity: .55; } }
   @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
-  @keyframes glow { 0%, 100% { text-shadow: 0 0 .05em rgba(255,176,32,.15); } 50% { text-shadow: 0 0 .3em rgba(255,176,32,.95), 0 0 .8em rgba(255,176,32,.55); } }
+  @keyframes glow { 0%, 100% { text-shadow: 0 0 .05em color-mix(in srgb, var(--warn) 15%, transparent); } 50% { text-shadow: 0 0 .3em color-mix(in srgb, var(--warn) 95%, transparent), 0 0 .8em color-mix(in srgb, var(--warn) 55%, transparent); } }
 
   /* Edge flash around the whole screen (visible over transparent OBS sources too) */
   body::after { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0; }
-  [data-state="half"]::after { box-shadow: inset 0 0 9vmin rgba(255,176,32,.75); animation: edge 1s ease-in-out infinite; }
-  [data-state="ten"]::after { box-shadow: inset 0 0 11vmin rgba(255,77,77,.85); animation: edge .8s ease-in-out infinite; }
-  [data-state="up"]::after { box-shadow: inset 0 0 13vmin rgba(255,77,77,.95); animation: edge .7s ease-in-out infinite; }
+  [data-state="half"]::after { box-shadow: inset 0 0 9vmin color-mix(in srgb, var(--warn) 75%, transparent); animation: edge 1s ease-in-out infinite; }
+  [data-state="ten"]::after { box-shadow: inset 0 0 11vmin color-mix(in srgb, var(--danger) 85%, transparent); animation: edge .8s ease-in-out infinite; }
+  [data-state="up"]::after { box-shadow: inset 0 0 13vmin color-mix(in srgb, var(--danger) 95%, transparent); animation: edge .7s ease-in-out infinite; }
   @keyframes edge { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 
   /* Pop-up message */
   .popup {
     position: fixed; top: 6vmin; left: 50%; transform: translate(-50%, -140%); opacity: 0;
-    font-size: 6vmin; font-weight: 700; padding: 1.4vmin 4vmin; border-radius: 99px; white-space: nowrap;
+    font-size: 6vmin; font-weight: var(--weight-bold); padding: 1.4vmin 4vmin; border-radius: 99px; white-space: nowrap;
     color: #1b1200; background: var(--warn); box-shadow: 0 1vmin 4vmin rgba(0,0,0,.4);
-    transition: transform .35s cubic-bezier(.2,.9,.3,1.2), opacity .25s; pointer-events: none;
+    transition: transform .35s var(--ease-pop), opacity .25s; pointer-events: none;
   }
   .popup.show { transform: translate(-50%, 0); opacity: 1; }
-  .popup[data-kind="ten"], .popup[data-kind="up"] { background: var(--bad); color: #fff; }
+  .popup[data-kind="ten"], .popup[data-kind="up"] { background: var(--danger); color: var(--on-danger); }
   .popup[data-kind="up"] { font-size: 8vmin; animation: flash .7s ease-in-out infinite; }
 
-  .offline { position: fixed; bottom: 1.5vmin; right: 2vmin; font-size: 2.4vmin; color: var(--bad); display: none; }
+  .offline { position: fixed; bottom: 1.5vmin; right: 2vmin; font-size: 2.4vmin; color: var(--danger-text); display: none; }
   body.off .offline { display: block; }
   .hide { display: none !important; }
+
+  /* Reduced motion: warnings turn steady; colour, edge and words still change */
+  @media (prefers-reduced-motion: reduce) {
+    .time, .popup, body::after { animation: none !important; }
+    [data-state="half"]::after, [data-state="ten"]::after, [data-state="up"]::after { opacity: 1; }
+  }
 </style>
 </head>
-<body data-state="idle">
+<body class="stage" data-state="idle">
   <div class="section" id="section"></div>
   <div class="name" id="name">Waiting for schedule…</div>
   <div class="time" id="time">0:00</div>
   <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="up" id="up">Up next: <b id="upName"></b><span id="upDur"></span></div>
   <div class="popup" id="popup"></div>
   <div class="offline">● reconnecting…</div>
 <script src="/client.js"></script>
@@ -73,7 +89,7 @@
   const $ = (id) => document.getElementById(id); // (window.name is built in, so no id-globals)
   const q = new URLSearchParams(location.search);
   if (q.get('bg') === 'transparent') document.body.classList.add('transparent');
-  if (q.get('name') === '0') { $('name').classList.add('hide'); $('section').classList.add('hide'); }
+  if (q.get('name') === '0') { $('name').classList.add('hide'); $('section').classList.add('hide'); $('up').classList.add('hide'); }
   if (q.get('bar') === '0') $('bar').classList.add('hide');
   const elapsedMode = q.get('mode') === 'elapsed';
 
@@ -85,9 +101,22 @@
     if (last) {
       const v = ST.view(last, conn.offset());
       document.body.dataset.state = v.state;
+      // Between parts (nothing started yet) the current time can stand in for a frozen countdown.
+      const now = !!(last.clock && last.clock.show) && v.state === 'idle';
+      document.body.classList.toggle('now', now);
       $('name').textContent = last.talk ? last.talk.name : 'No schedule';
-      $('section').textContent = last.talk ? last.talk.section : '';
-      $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
+      if (now) {
+        const c = ST.clockTime(new Date(Date.now() + conn.offset()), last.clock.format);
+        $('section').textContent = 'Current time';
+        $('time').textContent = c.time;
+        if (c.ampm) $('time').appendChild(document.createElement('small')).textContent = c.ampm;
+        $('up').style.visibility = last.talk ? '' : 'hidden';
+        $('upName').textContent = last.talk ? last.talk.name : '';
+        $('upDur').textContent = ' · ' + ST.fmt(last.targetSecs);
+      } else {
+        $('section').textContent = last.talk ? last.talk.section : '';
+        $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
+      }
       $('fill').style.width = (v.progress * 100).toFixed(2) + '%';
       alerter(v.state, last.currentId);
     }

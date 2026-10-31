@@ -161,6 +161,113 @@ test('http api: PIN, commands, state', async () => {
   const st = await (await fetch(base + '/api/state')).json();
   assert.strictEqual(st.currentId, 3);
   assert.strictEqual(st.running, false);
-  for (const page of ['/display', '/control', '/dock']) assert.strictEqual((await fetch(base + page)).status, 200);
+  for (const page of ['/display', '/control', '/dock', '/steward.css', '/art.js']) assert.strictEqual((await fetch(base + page)).status, 200);
+  const font = await fetch(base + '/noto-sans.woff2');
+  assert.strictEqual(font.headers.get('content-type'), 'font/woff2');
   await server.close();
+});
+
+test('a new day: the right meeting is loaded, but never while a part is running or paused', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  let today = new Date(2026, 9, 31, 12); // Saturday
+  const offline = async () => { throw new Error('offline'); };
+  const service = new StageService({ dataDir: dir, now: () => today, fetchImpl: offline });
+  await service.loadSchedule();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+
+  service.timer.select(2);
+  today = new Date(2026, 10, 1, 12); // Sunday: still the weekend meeting, left as it is
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.currentId, 2);
+
+  today = new Date(2026, 10, 2, 12); // Monday: midweek, but a part is under way
+  service.timer.start();
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+  await new Promise((r) => setTimeout(r, 20)); // some time on the clock before the pause
+  service.timer.pause();
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+  service.timer.reset();
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'midweek');
+
+  // Midweek chosen by hand: a new week still brings that week's parts.
+  await service.updateSettings({ meetingMode: 'midweek' });
+  service.timer.select(3);
+  today = new Date(2026, 10, 3, 12); // Tuesday, same week
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.currentId, 3);
+  today = new Date(2026, 10, 9, 12); // next Monday
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.currentId, 1);
+});
+
+test('a new day switches meeting at once, and the week downloads after', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  let today = new Date(2026, 9, 25, 12); // Sunday
+  let release;
+  const slow = () => new Promise((resolve) => (release = () => resolve({ ok: true, text: async () => JSON.stringify(feedList) })));
+  const service = new StageService({ dataDir: dir, now: () => today, fetchImpl: slow });
+  await service.loadSchedule();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+
+  today = new Date(2026, 9, 26, 12); // Monday: switch without waiting for the download
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'midweek');
+  assert.strictEqual(service.timer.meta.scheduleSource, 'pending');
+  const quick = service.timer.items;
+  release();
+  await service.pendingDownload;
+  assert.strictEqual(service.timer.meta.scheduleSource, 'network');
+  assert.notStrictEqual(service.timer.items, quick); // this week's downloaded parts replaced the stand-ins
+});
+
+test('a downloaded week never replaces the parts once one is under way', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  let today = new Date(2026, 9, 25, 12);
+  let release;
+  const slow = () => new Promise((resolve) => (release = () => resolve({ ok: true, text: async () => JSON.stringify(feedList) })));
+  const service = new StageService({ dataDir: dir, now: () => today, fetchImpl: slow });
+  await service.loadSchedule();
+  today = new Date(2026, 9, 26, 12);
+  await service.refreshForToday();
+  const before = service.timer.items;
+  service.timer.select(before[1].id);
+  service.timer.start();
+  release();
+  await service.pendingDownload;
+  assert.strictEqual(service.timer.items, before);
+  assert.strictEqual(service.timer.running, true);
+  assert.strictEqual(service.timer.meta.scheduleSource, 'none'); // the control page offers "Try again"
+});
+
+test('current-time clock: off by default, 12- or 24-hour, sent to the pages', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const service = new StageService({ dataDir: dir, fetchImpl: async () => { throw new Error('offline'); } });
+  assert.deepStrictEqual(service.snapshot().clock, { show: false, format: '12h' });
+
+  await service.updateSettings({ showClock: true, clockFormat: '24h' });
+  assert.deepStrictEqual(service.snapshot().clock, { show: true, format: '24h' });
+  await service.updateSettings({ clockFormat: 'sundial', showClock: 'yes' });
+  assert.deepStrictEqual(service.snapshot().clock, { show: false, format: '24h' });
+});
+
+test('theme: follows Windows by default, can be light or dark, sent to the pages', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const service = new StageService({ dataDir: dir, fetchImpl: async () => { throw new Error('offline'); } });
+  assert.strictEqual(service.snapshot().theme, 'auto');
+  await service.updateSettings({ theme: 'dark' });
+  assert.strictEqual(service.snapshot().theme, 'dark');
+  await service.updateSettings({ theme: 'purple' });
+  assert.strictEqual(service.settings.theme, 'dark');
+});
+
+test('current-time clock text', () => {
+  const ST = require('../web/client.js');
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 19, 5), '12h'), { time: '7:05', ampm: 'PM' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 0, 30), '12h'), { time: '12:30', ampm: 'AM' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 12, 0), '12h'), { time: '12:00', ampm: 'PM' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 19, 5), '24h'), { time: '19:05', ampm: '' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 7, 5), '24h'), { time: '07:05', ampm: '' });
 });
