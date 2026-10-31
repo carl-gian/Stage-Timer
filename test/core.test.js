@@ -200,3 +200,23 @@ test('a new day: the right meeting is loaded, but never while a part is running 
   await service.refreshForToday();
   assert.strictEqual(service.timer.currentId, 1);
 });
+
+test('current-time clock: off by default, 12- or 24-hour, sent to the pages', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const service = new StageService({ dataDir: dir, fetchImpl: async () => { throw new Error('offline'); } });
+  assert.deepStrictEqual(service.snapshot().clock, { show: false, format: '12h' });
+
+  await service.updateSettings({ showClock: true, clockFormat: '24h' });
+  assert.deepStrictEqual(service.snapshot().clock, { show: true, format: '24h' });
+  await service.updateSettings({ clockFormat: 'sundial', showClock: 'yes' });
+  assert.deepStrictEqual(service.snapshot().clock, { show: false, format: '24h' });
+});
+
+test('current-time clock text', () => {
+  const ST = require('../web/client.js');
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 19, 5), '12h'), { time: '7:05', ampm: 'PM' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 0, 30), '12h'), { time: '12:30', ampm: 'AM' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 12, 0), '12h'), { time: '12:00', ampm: 'PM' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 19, 5), '24h'), { time: '19:05', ampm: '' });
+  assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 7, 5), '24h'), { time: '07:05', ampm: '' });
+});

@@ -60,6 +60,8 @@
   .ib { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 9px; background: var(--card); border: 1px solid var(--line); font-size: 13px; color: var(--dim); display: none; }
   .ib.show { display: inline-block; } a.ib { line-height: 30px; text-decoration: none; }
   .ib:hover, .ib.on { color: var(--fg); border-color: var(--accent); }
+  .now { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 6px; white-space: nowrap; }
+  .now small { font-size: 11px; color: var(--dim); font-weight: 600; margin-left: 2px; }
   .connect { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; gap: 14px; align-items: center; }
   .connect.show { display: flex; }
   .connect .qr { width: 120px; height: 120px; flex: none; border-radius: 8px; overflow: hidden; background: #fff; }
@@ -117,6 +119,7 @@
 <header>
   <h1 id="title">Stage Timer<small id="sub"></small></h1>
   <div class="icons">
+    <div class="now" id="now" hidden></div>
     <a class="ib" id="reportBtn" href="/report" target="_blank" rel="noopener" title="Open the latest timer report">Report</a>
     <button class="ib show" id="connectBtn" title="Show QR code and PIN for phones">Connect</button>
     <button class="ib" id="settingsBtn" title="Open Stage Timer settings">⚙ Settings</button>
@@ -331,6 +334,13 @@
       $('time').textContent = v.text;
       $('fill').style.width = (v.progress * 100).toFixed(1) + '%';
       alerter(v.state, state.currentId);
+      const showNow = !!(state.clock && state.clock.show);
+      $('now').hidden = !showNow;
+      if (showNow) {
+        const c = ST.clockTime(new Date(Date.now() + conn.offset()), state.clock.format);
+        $('now').textContent = c.time;
+        if (c.ampm) $('now').appendChild(document.createElement('small')).textContent = c.ampm;
+      }
       const orig = state.items.find((i) => i.id === state.currentId);
       const adapted = orig && orig.adaptedSecs != null && orig.adaptedSecs !== orig.durationSecs;
       $('meta').textContent = orig ? (adapted ? 'Adapted ' : 'Planned ') + ST.fmt(state.targetSecs) + (orig.originalSecs !== state.targetSecs ? ' (was ' + ST.fmt(orig.originalSecs) + ')' : '') + ' · ' + { idle: 'Ready', running: 'Running', minute: '1 minute left', half: '30 seconds left', ten: '10 seconds left', up: 'Time’s up', over: 'Over time', stopped: 'Paused' }[v.state] : '';

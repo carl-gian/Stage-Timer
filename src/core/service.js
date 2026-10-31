@@ -47,6 +47,8 @@ class StageService extends EventEmitter {
       obsCounselScenes: {}, // per-part counseling scene, same shape as obsScenes
       obsCounselScene: '', // scene after a ministry student talk is stopped (counsel is given); empty = use the default
       obsDefaultScene: '', // scene to show when a part is stopped (empty = leave OBS alone)
+      showClock: false, // current time on the control page, and on the display between parts
+      clockFormat: '12h', // 12h | 24h
       ...this._readSettings(),
     };
     for (const k of ['obsScenes', 'obsCounselScenes']) if (!this.settings[k] || typeof this.settings[k] !== 'object') this.settings[k] = {};
@@ -75,7 +77,8 @@ class StageService extends EventEmitter {
       assigned: this.settings.obsScenes[mt] || {},
       counsel: this.settings.obsCounselScenes[mt] || {},
     };
-    return { ...this.timer.snapshot(), obs, report: this.latestReport };
+    const clock = { show: this.settings.showClock, format: this.settings.clockFormat };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport, clock };
   }
 
   /** Writes an over/under report for every part timed so far. `trigger` is the part it follows (null = on request). */
@@ -230,7 +233,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
@@ -245,6 +248,8 @@ class StageService extends EventEmitter {
     this.settings.autoUpdate = this.settings.autoUpdate !== false;
     this.settings.startHidden = this.settings.startHidden !== false;
     this.settings.obsEnabled = this.settings.obsEnabled === true;
+    this.settings.showClock = this.settings.showClock === true;
+    if (!['12h', '24h'].includes(this.settings.clockFormat)) this.settings.clockFormat = before.clockFormat;
     this.settings.obsPassword = String(this.settings.obsPassword ?? '');
     const url = String(this.settings.obsUrl ?? '').trim();
     const withScheme = /^wss?:\/\//i.test(url) ? url : `ws://${url}`;

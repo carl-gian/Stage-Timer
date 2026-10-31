@@ -75,6 +75,13 @@
   </div>
 
   <div class="card">
+    <h2>Clock</h2>
+    <div class="row"><div class="lbl"><b>Show the current time</b><span>In the control page’s top bar, and on the speaker’s screen between parts. While a part runs, the screen shows only the countdown.</span></div><label class="chk"><input type="checkbox" id="showClock"></label></div>
+    <div class="row"><div class="lbl"><b>Time format</b><span id="clockDesc"></span></div>
+      <div class="seg" id="clockFormat"><button data-v="12h">12-hour</button><button data-v="24h">24-hour</button></div></div>
+  </div>
+
+  <div class="card">
     <h2>OBS scenes (optional)</h2>
     <div class="row"><div class="lbl"><b>Switch scenes automatically</b><span>When a part starts, its scene goes to Preview, then Transition. Works with the EMEET-OBS Bridge.</span></div><label class="chk"><input type="checkbox" id="obsOn"></label></div>
     <div id="obsBody">

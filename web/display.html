@@ -21,6 +21,14 @@
   .bar { width: 70vw; height: 2.2vmin; background: rgba(255,255,255,.12); border-radius: 99px; overflow: hidden; }
   .bar > i { display: block; height: 100%; width: 0; background: var(--ok); transition: background .2s; }
 
+  /* Current time between parts (Settings → Clock) */
+  .time small { font-size: 9vmin; color: var(--dim); margin-left: 1.5vmin; font-weight: 600; }
+  .up { font-size: 4.2vmin; color: var(--dim); text-align: center; padding: 0 4vw; display: none; }
+  .up b { color: var(--fg); font-weight: 600; }
+  body.now .time { color: var(--fg); }
+  body.now .up { display: block; }
+  body.now .name, body.now .bar { display: none; }
+
   /* Colour by stage */
   [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--dim); }
   [data-state="minute"] .time, [data-state="half"] .time { color: var(--warn); }
@@ -66,6 +74,7 @@
   <div class="name" id="name">Waiting for schedule…</div>
   <div class="time" id="time">0:00</div>
   <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="up" id="up">Up next: <b id="upName"></b><span id="upDur"></span></div>
   <div class="popup" id="popup"></div>
   <div class="offline">● reconnecting…</div>
 <script src="/client.js"></script>
@@ -73,7 +82,7 @@
   const $ = (id) => document.getElementById(id); // (window.name is built in, so no id-globals)
   const q = new URLSearchParams(location.search);
   if (q.get('bg') === 'transparent') document.body.classList.add('transparent');
-  if (q.get('name') === '0') { $('name').classList.add('hide'); $('section').classList.add('hide'); }
+  if (q.get('name') === '0') { $('name').classList.add('hide'); $('section').classList.add('hide'); $('up').classList.add('hide'); }
   if (q.get('bar') === '0') $('bar').classList.add('hide');
   const elapsedMode = q.get('mode') === 'elapsed';
 
@@ -85,9 +94,22 @@
     if (last) {
       const v = ST.view(last, conn.offset());
       document.body.dataset.state = v.state;
+      // Between parts (nothing started yet) the current time can stand in for a frozen countdown.
+      const now = !!(last.clock && last.clock.show) && v.state === 'idle';
+      document.body.classList.toggle('now', now);
       $('name').textContent = last.talk ? last.talk.name : 'No schedule';
-      $('section').textContent = last.talk ? last.talk.section : '';
-      $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
+      if (now) {
+        const c = ST.clockTime(new Date(Date.now() + conn.offset()), last.clock.format);
+        $('section').textContent = 'Current time';
+        $('time').textContent = c.time;
+        if (c.ampm) $('time').appendChild(document.createElement('small')).textContent = c.ampm;
+        $('up').style.visibility = last.talk ? '' : 'hidden';
+        $('upName').textContent = last.talk ? last.talk.name : '';
+        $('upDur').textContent = ' · ' + ST.fmt(last.targetSecs);
+      } else {
+        $('section').textContent = last.talk ? last.talk.section : '';
+        $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
+      }
       $('fill').style.width = (v.progress * 100).toFixed(2) + '%';
       alerter(v.state, last.currentId);
     }
