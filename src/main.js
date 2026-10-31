@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage, nativeTheme } = require('electron');
 const QRCode = require('qrcode');
 const { StageService } = require('./core/service');
 const { createServer } = require('./core/server');
@@ -95,12 +95,12 @@ function showWindow() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 560,
-    height: 760,
-    minWidth: 480,
-    minHeight: 560,
+    width: 1000,
+    height: 720,
+    minWidth: 640,
+    minHeight: 520,
     title: 'Stage Timer',
-    backgroundColor: '#0b0e14',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#121a2b' : '#ffffff', // matches the page, so opening doesn't flash
     autoHideMenuBar: true,
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'renderer', 'preload.js'), contextIsolation: true, nodeIntegration: false },

@@ -161,7 +161,9 @@ test('http api: PIN, commands, state', async () => {
   const st = await (await fetch(base + '/api/state')).json();
   assert.strictEqual(st.currentId, 3);
   assert.strictEqual(st.running, false);
-  for (const page of ['/display', '/control', '/dock']) assert.strictEqual((await fetch(base + page)).status, 200);
+  for (const page of ['/display', '/control', '/dock', '/steward.css', '/art.js']) assert.strictEqual((await fetch(base + page)).status, 200);
+  const font = await fetch(base + '/noto-sans.woff2');
+  assert.strictEqual(font.headers.get('content-type'), 'font/woff2');
   await server.close();
 });
 

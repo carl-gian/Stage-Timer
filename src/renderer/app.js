@@ -22,6 +22,7 @@ function paint(d) {
   $('uDisplay').textContent = d.urls.display;
   $('uControl').textContent = d.urls.control;
   $('uDock').textContent = d.urls.dock;
+  $('uDockObs').textContent = d.urls.dock;
   $('qr').src = d.qr;
   $('pin').textContent = d.settings.pin;
   document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.meetingMode));
@@ -85,7 +86,7 @@ function paintObs(d) {
     if (document.activeElement !== $(id)) $(id).value = value;
   }
 
-  $('obsHint').textContent = `Scene for each part of the ${d.meetingType === 'weekend' ? 'weekend' : 'midweek'} meeting. Use Meeting type above to set up the other one.`;
+  $('obsHint').textContent = `Scene for each part of the ${d.meetingType === 'weekend' ? 'weekend' : 'midweek'} meeting. Change Meeting type (under Meeting) to set up the other one.`;
 
   // Rebuilding while a menu is open would close it, so only rebuild when something changed.
   const assigned = settings.obsScenes[d.meetingType] || {};
@@ -155,6 +156,15 @@ function paintReports(d) {
     $('reports').append(row);
   }
 }
+
+// Side menu: one section at a time, under one banner of art
+$('heroArt').innerHTML = platformArt({ w: 1600, h: 380, cx: 1150, crowd: false, dark: '#164e57', mid: '#a9d6d9', light: '#eaf5f5', id: 'hero' });
+document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((n) => (n === b ? n.setAttribute('aria-current', 'page') : n.removeAttribute('aria-current')));
+  document.querySelectorAll('section').forEach((s) => s.classList.toggle('on', s.dataset.sec === b.dataset.sec));
+  $('secTitle').textContent = b.textContent;
+  document.querySelector('main').scrollTop = 0;
+}));
 
 const refresh = () => window.stage.info().then(paint);
 const save = (patch) => window.stage.update(patch).then(paint);
