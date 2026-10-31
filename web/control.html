@@ -98,7 +98,7 @@
   .clock .nm { margin: 0; font-size: var(--text-xl); font-weight: var(--weight-bold); line-height: 1.2; min-height: 1.2em; }
   .clock .t { font-size: 128px; font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin: var(--space-4) 0 var(--space-2); transition: color .2s; }
   .clock .meta { color: var(--text-dim); font-size: var(--text-sm); min-height: 1.45em; }
-  .bar { height: 8px; border-radius: var(--radius-pill); background: var(--brand-soft); overflow: hidden; margin: var(--space-4) 0 var(--space-6); }
+  .bar { height: 8px; border-radius: var(--radius-pill); background: var(--brand-soft); overflow: hidden; margin: var(--space-4) 0 0; }
   .bar i { display: block; height: 100%; width: 0; background: var(--brand); }
 
   /* Colour by stage, with motion and words too, so colour is never the only signal */
@@ -124,7 +124,7 @@
   .popup[data-kind="ten"], .popup[data-kind="up"] { background: var(--danger); color: var(--on-danger); }
   .popup[data-kind="up"] { animation: flash .7s ease-in-out infinite; }
 
-  .main { display: flex; gap: var(--space-3); }
+  .main { display: flex; gap: var(--space-3); margin-top: var(--space-6); } /* room for the warning frame around the clock */
   .main button { min-height: var(--tap-main); padding: 0 var(--space-5); border-radius: var(--radius-pill); font-size: var(--text-md); font-weight: var(--weight-bold); border: 1.5px solid var(--line); background: var(--page); transition: transform .12s ease-out; }
   .main button:active:not(:disabled) { transform: scale(.97); }
   .main .go { flex: 1; font-size: var(--text-lg); border: 0; background: var(--brand); color: var(--on-brand); }
@@ -183,7 +183,8 @@
     .clock { text-align: center; padding-top: var(--space-2); }
     .clock .nm { font-size: var(--text-lg); }
     .clock .t { font-size: 76px; margin: var(--space-2) 0 var(--space-1); }
-    .bar { margin: var(--space-3) 0 var(--space-4); }
+    .bar { margin: var(--space-3) 0 0; }
+    .main { margin-top: var(--space-5); }
     .scenes { margin-top: 0; }
     .plan .foot { border-top: 0; padding-top: 0; }
   }
