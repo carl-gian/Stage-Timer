@@ -11,6 +11,8 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 - **Show the current time** (off by default). Turn it on under *Meeting → Clock*. The time of day appears on the control page, with when the meeting should end, and on the speaker's screen between parts, with the next part below it. While someone is speaking, the screen shows only their countdown. Choose a 12-hour (7:30 PM) or 24-hour (19:30) clock.
 - **Theme.** Under *Advanced*, choose Auto (follows Windows), Light or Dark for the control page and the app window. The speaker's screen and the OBS dock are always dark, so they never glare.
 - **The meeting changes with the day.** When the app is left running, it now switches between the midweek and weekend meeting by itself within a few seconds of the day changing, and loads the new week's parts. It never switches while a part is running or paused.
+- **Show the speaker's screen on another monitor.** By default it opens in your browser. Under *Advanced → Show speaker's screen on* you can pick a connected monitor (such as a third screen or a TV), and *Open* shows it fullscreen there. Press Esc to close it.
+- **OBS gets the control dock only.** The OBS Browser Source ("on-screen timer") setup and the `?bg=transparent` option are removed.
 
 ## What's new in 1.1.5
 

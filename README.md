@@ -10,24 +10,21 @@ of sounds or system notifications.
 
 ## How it's used
 
-**Laptop with OBS.** The OBS dock (1) controls the timer, and the display (2) goes to a web page or an HDMI screen, whichever you prefer.
+**Laptop with OBS.** The OBS dock controls the timer, and the speaker's screen goes to a web page or an HDMI screen, whichever you prefer.
 
-![The laptop's OBS dock (1) controls the timer and the display (2) shows it on another screen](docs/images/setup-obs-dock-display.png)
+**Add a phone.** The same timer can also be controlled from a phone, alongside the OBS dock. The speaker's screen stays in sync with both.
 
-**Add a phone.** The same timer can also be controlled from a phone (1), alongside the OBS dock (2). The display (3) stays in sync with both.
-
-![A phone (1) and the OBS dock (2) both control the timer, and the display (3) shows it](docs/images/setup-phone-obs-dock-display.png)
-
-Everything stays in sync. Start a part on the phone and the OBS dock and the display follow instantly.
-
-![The phone control page next to OBS with the Stage Timer dock, both showing the same running part](docs/images/phone-and-obs-dock.webp)
+Everything stays in sync. Start a part on the phone and the OBS dock and the speaker's screen follow instantly.
 
 ## What it does
 
 - **Automatic schedule.** Fetches the week's parts and times (cached for offline use). Midweek or weekend is picked from the day, with a manual override and a circuit visit option.
 - **Control from anywhere.** Start, Stop, Pause, Reset, ±30 s / ±1 min, and choose any part, from a phone, tablet or browser. Protected by a PIN.
 - **OBS dock.** A compact control panel you can dock inside OBS, with a hidden Connect panel (QR code + PIN), a Report button and a button that opens the app's settings.
-- **Display page.** A big, readable timer for any screen. It opens in your browser by default, or fullscreen on another monitor (for example a third screen) if you pick one under Advanced → *Show display on*. Press Esc to close it.
+- **Speaker's screen (display page).** A big, readable timer for any screen. It opens in your browser by default, or fullscreen on another monitor (for example a third screen) if you pick one under Advanced → *Show speaker's screen on*. Press Esc to close it.
+- **Current time** (optional). Show the time of day, in a 12- or 24-hour clock, on the control page and on the speaker's screen between parts.
+- **Light, dark or automatic theme** for the control page and app window. The speaker's screen and OBS dock stay dark.
+- **Follows the calendar.** Left running in the tray, it switches between the midweek and weekend meeting and loads the new week's parts by itself, never while a part is running or paused.
 - **Easy links.** `http://stage.local/display`: no IP address or port to type.
 - **Warnings you can see from the back of the room.** Amber glow with one minute left, flashing amber from 30 s, flashing red from 10 s, then a flashing "Time's up" pop-up.
 - **OBS scene switching** (optional). Give each part an OBS scene; when the part starts, the scene is sent to OBS Preview and then Transitioned, like pressing the button in Studio Mode. See [OBS scene switching](#obs-scene-switching-optional).
@@ -39,15 +36,10 @@ Everything stays in sync. Start a part on the phone and the OBS dock and the dis
 
 1. Install and open Stage Timer. The window shows your links, a QR code and the PIN.
 
-   ![The Stage Timer window with the links, QR code, PIN and settings](docs/images/app-window.webp)
-
 2. **OBS control dock:** *View → Docks → Custom Browser Docks…*, name it "Stage Timer", paste `http://localhost/dock`, Apply.
-
-   ![OBS Docks menu: Custom Browser Docks, then name and URL, then Apply](docs/images/obs-add-dock.webp)
 
    The timer now sits inside OBS:
 
-   ![OBS Studio with the Stage Timer dock beside the scenes and controls](docs/images/obs-with-dock.webp)
 3. **Phone or tablet:** scan the QR code (or click **Connect** in the dock) and enter the PIN. On the computer running OBS no PIN is needed.
 
 Closing the window keeps Stage Timer running in the system tray. After the first launch it also starts hidden in the tray, without opening the window (click the tray icon to open it, or turn *Start hidden* off under Advanced).
@@ -56,11 +48,7 @@ Closing the window keeps Stage Timer running in the system tray. After the first
 
 The control page works on a phone, a tablet, or a laptop browser tab:
 
-![The control page on a phone and on a laptop, both showing the running part with Stop, Pause, Reset and time adjustments](docs/images/control-devices.png)
-
 The display works on any screen: a TV, a monitor, or a laptop:
-
-![The display page on a TV and on a laptop, each showing the part name, a big countdown and a progress bar](docs/images/display-devices.png)
 
 | Page | Use |
 |---|---|
@@ -71,7 +59,7 @@ The display works on any screen: a TV, a monitor, or a laptop:
 
 ### Showing the display on another monitor
 
-By default **Open** next to Display opens the timer in your browser. To put it on another physically connected monitor (a TV or a third screen), open Stage Timer's window and choose the monitor under **Advanced → Show display on**. **Open** (and *Open display* in the tray menu) then shows the timer fullscreen on that monitor. Press **Esc** to close it. If the chosen monitor isn't connected, it falls back to the browser. The display can still be used on any other screen or device with the Display link.
+By default **Open** next to Display opens the timer in your browser. To put it on another physically connected monitor (a TV or a third screen), open Stage Timer's window and choose the monitor under **Advanced → Show speaker's screen on**. **Open** (and *Open display* in the tray menu) then shows the timer fullscreen on that monitor. Press **Esc** to close it. If the chosen monitor isn't connected, it falls back to the browser. The display can still be used on any other screen or device with the Display link.
 
 ## How the timer behaves
 
