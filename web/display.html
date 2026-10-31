@@ -6,7 +6,7 @@
 <title>Stage Timer Display</title>
 <link rel="stylesheet" href="/steward.css">
 <style>
-  /* Options (URL query):  ?bg=transparent  ?name=0  ?bar=0  ?mode=elapsed
+  /* Options (URL query):  ?name=0  ?bar=0  ?mode=elapsed
      Always dark (class "stage" in steward.css): a white screen glares on stage and over OBS video. Never coral here. */
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -15,7 +15,6 @@
     font-family: var(--font); -webkit-font-smoothing: antialiased;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2vmin;
   }
-  body.transparent { background: transparent; }
   .section { font-size: 2.6vmin; color: var(--brand); text-transform: uppercase; letter-spacing: .16em; font-weight: var(--weight-bold); }
   .name { font-size: 5vmin; color: var(--text-dim); font-weight: var(--weight-medium); text-align: center; padding: 0 4vw; }
   .time { font-size: 30vmin; font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color .2s; }
@@ -47,7 +46,7 @@
   @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
   @keyframes glow { 0%, 100% { text-shadow: 0 0 .05em color-mix(in srgb, var(--warn) 15%, transparent); } 50% { text-shadow: 0 0 .3em color-mix(in srgb, var(--warn) 95%, transparent), 0 0 .8em color-mix(in srgb, var(--warn) 55%, transparent); } }
 
-  /* Edge flash around the whole screen (visible over transparent OBS sources too) */
+  /* Edge flash around the whole screen */
   body::after { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0; }
   [data-state="half"]::after { box-shadow: inset 0 0 9vmin color-mix(in srgb, var(--warn) 75%, transparent); animation: edge 1s ease-in-out infinite; }
   [data-state="ten"]::after { box-shadow: inset 0 0 11vmin color-mix(in srgb, var(--danger) 85%, transparent); animation: edge .8s ease-in-out infinite; }
@@ -88,7 +87,6 @@
 <script>
   const $ = (id) => document.getElementById(id); // (window.name is built in, so no id-globals)
   const q = new URLSearchParams(location.search);
-  if (q.get('bg') === 'transparent') document.body.classList.add('transparent');
   if (q.get('name') === '0') { $('name').classList.add('hide'); $('section').classList.add('hide'); $('up').classList.add('hide'); }
   if (q.get('bar') === '0') $('bar').classList.add('hide');
   const elapsedMode = q.get('mode') === 'elapsed';

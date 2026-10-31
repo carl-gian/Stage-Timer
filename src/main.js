@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage, nativeTheme } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, shell, clipboard, nativeImage, nativeTheme, screen } = require('electron');
 const QRCode = require('qrcode');
 const { StageService } = require('./core/service');
 const { createServer } = require('./core/server');
@@ -10,7 +10,7 @@ const { UpdateManager } = require('./core/updates');
 const { pdfName } = require('./core/report');
 const { renderPdf, uniquePath } = require('./pdf');
 
-let service, server, win, tray, updates;
+let service, server, win, tray, updates, displayWin;
 let serverError = null;
 let quitting = false;
 const qrCache = new Map();
@@ -48,6 +48,7 @@ async function info() {
     schedule: { source: service.timer.meta.scheduleSource, error: service.timer.meta.scheduleError, count: service.timer.items.length },
     timer: { running: service.timer.running, talk: service.timer.current && service.timer.current.name },
     obs: service.obsInfo(),
+    displays: screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: `Monitor ${i + 1}: ${d.size.width}×${d.size.height}${d.id === screen.getPrimaryDisplay().id ? ' (main)' : ''}` })),
     reports: service.reports.list().slice(0, 5),
     parts: service.timer.items.map((i) => ({ key: i.key, name: i.name, section: i.sectionTitle })),
     version: app.getVersion(),
@@ -84,6 +85,30 @@ function setupUpdates() {
   const updater = supported ? require('electron-updater').autoUpdater : null;
   updates = new UpdateManager({ updater, reason, isEnabled: () => service.settings.autoUpdate, isBusy: () => service.timer.running });
   updates.start();
+}
+
+/** The display page, in the browser by default or fullscreen on the monitor chosen in the settings. */
+function openDisplay() {
+  const url = server.urls().displayLocal;
+  const target = screen.getAllDisplays().find((d) => String(d.id) === service.settings.displayScreen);
+  if (!target) return shell.openExternal(url); // default, or the chosen monitor is not plugged in
+  if (displayWin && !displayWin.isDestroyed()) displayWin.close(); // choosing again moves it
+  displayWin = new BrowserWindow({
+    x: target.bounds.x,
+    y: target.bounds.y,
+    width: target.bounds.width,
+    height: target.bounds.height,
+    backgroundColor: '#000000',
+    autoHideMenuBar: true,
+    fullscreen: true,
+    webPreferences: { sandbox: true },
+  });
+  displayWin.setMenuBarVisibility(false);
+  displayWin.webContents.on('before-input-event', (_e, input) => {
+    if (input.type === 'keyDown' && input.key === 'Escape') displayWin.close();
+  });
+  displayWin.loadURL(url);
+  displayWin.on('closed', () => (displayWin = null));
 }
 
 function showWindow() {
@@ -123,7 +148,7 @@ function createTray() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open Stage Timer', click: showWindow },
-      { label: 'Open display in browser', click: () => shell.openExternal(server.urls().displayLocal) },
+      { label: 'Open display', click: openDisplay },
       { type: 'separator' },
       { label: 'Quit', click: () => { quitting = true; app.quit(); } },
     ]),
@@ -186,6 +211,7 @@ app.whenReady().then(async () => {
     await service.loadSchedule({ force: true });
     return info();
   });
+  ipcMain.handle('open-display', openDisplay);
   ipcMain.handle('copy', (_e, text) => clipboard.writeText(String(text)));
   ipcMain.handle('open', (_e, url) => {
     if (/^http:\/\/(localhost|\d+\.\d+\.\d+\.\d+)(:\d+)?\//.test(url)) shell.openExternal(url);

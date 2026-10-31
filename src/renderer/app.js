@@ -51,6 +51,14 @@ function paintUpdate(d) {
   const u = d.update;
   $('verLine').textContent = `Version ${d.version}`;
   $('startHidden').checked = d.settings.startHidden;
+  const sel = $('displayScreen');
+  const opts = [['', 'Default (browser)']].concat(d.displays.map((s) => [s.id, s.label]));
+  if (sel.dataset.sig !== JSON.stringify(opts)) { // rebuild only when the monitors change, so an open list is not closed
+    sel.textContent = '';
+    for (const [v, t] of opts) sel.add(new Option(t, v));
+    sel.dataset.sig = JSON.stringify(opts);
+  }
+  if (document.activeElement !== sel) sel.value = opts.some(([v]) => v === d.settings.displayScreen) ? d.settings.displayScreen : '';
   $('autoUpdate').checked = d.settings.autoUpdate;
   const text = {
     unsupported: u.message,
@@ -184,6 +192,8 @@ document.querySelectorAll('#theme button').forEach((b) => (b.onclick = () => sav
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
 for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });
+$('openDisplay').onclick = () => window.stage.openDisplay();
+$('displayScreen').onchange = (e) => save({ displayScreen: e.target.value });
 $('startHidden').onchange = (e) => save({ startHidden: e.target.checked });
 $('autoUpdate').onchange = (e) => save({ autoUpdate: e.target.checked });
 $('checkUpd').onclick = () => window.stage.checkUpdate().then(paint);

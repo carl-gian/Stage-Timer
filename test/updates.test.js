@@ -98,6 +98,15 @@ test('settings: automatic updates default on and can be turned off', async () =>
   assert.strictEqual(service.settings.autoUpdate, true);
 });
 
+test('settings: the display monitor is a monitor id, or empty for the browser', async () => {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  assert.strictEqual(service.settings.displayScreen, '');
+  await service.updateSettings({ displayScreen: '2077' });
+  assert.strictEqual(service.settings.displayScreen, '2077');
+  await service.updateSettings({ displayScreen: 'bad value' });
+  assert.strictEqual(service.settings.displayScreen, '');
+});
+
 test('settings: start hidden defaults on, and only a new install counts as first run', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
   const first = new StageService({ dataDir: dir });

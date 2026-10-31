@@ -43,6 +43,7 @@ class StageService extends EventEmitter {
       obsPassword: '',
       obsSettleMs: DEFAULT_SETTLE_MS, // pause between Preview and Transition
       obsScenes: {}, // { midweek: { partKey: sceneName }, weekend: { ... } }
+      displayScreen: '', // '' = open the display in the browser; otherwise the id of the monitor to show it fullscreen on
       startHidden: true, // launch into the tray without opening the window
       autoUpdate: true, // download new versions in the background (installed when the app is quit)
       obsCounselScenes: {}, // per-part counseling scene, same shape as obsScenes
@@ -268,7 +269,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
 
@@ -282,6 +283,7 @@ class StageService extends EventEmitter {
 
     this.settings.autoUpdate = this.settings.autoUpdate !== false;
     this.settings.startHidden = this.settings.startHidden !== false;
+    this.settings.displayScreen = /^\d{1,12}$/.test(String(this.settings.displayScreen ?? '')) ? String(this.settings.displayScreen) : '';
     this.settings.obsEnabled = this.settings.obsEnabled === true;
     this.settings.showClock = this.settings.showClock === true;
     if (!['12h', '24h'].includes(this.settings.clockFormat)) this.settings.clockFormat = before.clockFormat;
