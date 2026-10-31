@@ -7,8 +7,15 @@
 <meta name="theme-color" content="#121a2b" media="(prefers-color-scheme: dark)">
 <title>Stage Timer Control</title>
 <script>
-  // The OBS dock sits inside OBS's dark window: always dark there, so it never glares
-  if (location.pathname === '/dock') document.documentElement.dataset.theme = 'dark';
+  // The OBS dock sits inside OBS's dark window: always dark there, so it never glares.
+  // Elsewhere: the theme from Settings (remembered here so the page doesn't flash while it connects).
+  const isDock = location.pathname === '/dock';
+  function applyTheme(t) {
+    if (isDock) t = 'dark';
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
+  }
+  try { applyTheme(localStorage.getItem('stTheme')); } catch { applyTheme(null); }
 </script>
 <link rel="stylesheet" href="/steward.css">
 <style>
@@ -399,6 +406,8 @@
 
   function render() {
     if (!state) return;
+    applyTheme(state.theme);
+    try { localStorage.setItem('stTheme', state.theme); } catch {}
     renderList();
     renderScenes();
     const dayType = state.meetingType === 'weekend' ? 'Weekend meeting' : 'Midweek meeting';

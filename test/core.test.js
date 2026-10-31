@@ -214,6 +214,16 @@ test('current-time clock: off by default, 12- or 24-hour, sent to the pages', as
   assert.deepStrictEqual(service.snapshot().clock, { show: false, format: '24h' });
 });
 
+test('theme: follows Windows by default, can be light or dark, sent to the pages', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const service = new StageService({ dataDir: dir, fetchImpl: async () => { throw new Error('offline'); } });
+  assert.strictEqual(service.snapshot().theme, 'auto');
+  await service.updateSettings({ theme: 'dark' });
+  assert.strictEqual(service.snapshot().theme, 'dark');
+  await service.updateSettings({ theme: 'purple' });
+  assert.strictEqual(service.settings.theme, 'dark');
+});
+
 test('current-time clock text', () => {
   const ST = require('../web/client.js');
   assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 19, 5), '12h'), { time: '7:05', ampm: 'PM' });

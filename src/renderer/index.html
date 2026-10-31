@@ -179,7 +179,9 @@
     <section data-sec="advanced">
       <div class="card">
         <h2>Advanced</h2>
-        <div class="row"><div class="lbl"><b>Start hidden</b><span>Open in the system tray without showing this window. Click the tray icon to open it.</span></div><label class="chk"><input type="checkbox" role="switch" id="startHidden" aria-label="Start hidden"></label></div>
+        <div class="row"><div class="lbl"><b>Theme</b><span>This window and the control page. The speaker’s screen and the OBS dock stay dark.</span></div>
+      <div class="seg" id="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+    <div class="row"><div class="lbl"><b>Start hidden</b><span>Open in the system tray without showing this window. Click the tray icon to open it.</span></div><label class="chk"><input type="checkbox" role="switch" id="startHidden" aria-label="Start hidden"></label></div>
         <div class="row"><div class="lbl"><b>Link name</b><span id="hostDesc"></span></div><input type="text" id="hostname" maxlength="30" style="width:130px"></div>
         <div class="row"><div class="lbl"><b>Port</b><span id="portDesc">80 gives the cleanest links; 4580 is used if it’s taken</span></div><input type="number" id="port" min="1" max="65535"></div>
         <div class="row"><div class="lbl"><b>No PIN on this computer</b><span>OBS on this machine can control without a PIN</span></div><label class="chk"><input type="checkbox" role="switch" id="localNoPin" aria-label="No PIN on this computer"></label></div>

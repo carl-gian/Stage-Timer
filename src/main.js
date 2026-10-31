@@ -139,6 +139,9 @@ app.whenReady().then(async () => {
   await startServer();
   service.on('report', (report) => savePdf(report).catch((err) => console.error('Could not save the report PDF:', err)));
   service.on('open-settings', showWindow); // from the OBS dock's gear button
+  const applyTheme = () => (nativeTheme.themeSource = service.settings.theme === 'auto' ? 'system' : service.settings.theme);
+  applyTheme();
+  service.on('settings', applyTheme);
   setupUpdates();
   createTray();
   // Start in the tray with no window, except on a brand-new install so there is something to see.
