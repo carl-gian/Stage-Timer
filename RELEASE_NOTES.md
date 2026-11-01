@@ -1,6 +1,13 @@
-# Stage Timer 1.2.0
+# Stage Timer 1.2.1
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.2.1
+
+- **Connect other devices more reliably.**
+  - **Refresh network.** Stage Timer now announces `stage.local` again on its own whenever this computer's network address changes (a new Wi-Fi network, a new IP, waking from sleep). There's also a **Refresh network** button under *Advanced → Network* and in the tray menu.
+  - **Open port** (Windows). If another device can't reach the timer, press **Open port** under *Advanced → Network* and choose Yes when Windows asks. It adds Windows Firewall rules for the timer's port and for the `stage.local` name announcements.
+  - **Clear status.** The Network row says whether `stage.local` leads to this computer or to a different device (for example a second Stage Timer using the same name), and shows the IP link that always works.
 
 ## What's new in 1.2.0
 
@@ -47,7 +54,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.2.0.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.2.1.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

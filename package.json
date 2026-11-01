@@ -1,6 +1,6 @@
 {
   "name": "stagetimer",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Meeting stage timer with OBS dock and web control",
   "main": "src/main.js",
   "scripts": {

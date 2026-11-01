@@ -108,7 +108,12 @@ Stage Timer announces itself on your local network as `stage.local` (you can cha
 `http://stage.local/display` and `http://stage.local/control`. It uses port 80 when available and falls back to 4580. Everything stays on your
 local network; the app is not exposed to the internet.
 
-If `stage.local` doesn't work (some guest or "client isolation" Wi-Fi blocks device discovery), use the IP address link shown in the app.
+If `stage.local` doesn't work, try these in order:
+
+- Press **Refresh network** under *Advanced → Network* (also in the tray menu). Stage Timer also does this by itself when the computer's network address changes.
+- On Windows, press **Open port** under *Advanced → Network* and choose Yes when Windows asks. It adds Windows Firewall rules for the timer's port and for the name announcements.
+- If the Network row says `stage.local` leads to a different device, another Stage Timer on the network is using the name. Give each one its own *Link name* under Advanced.
+- Some guest or "client isolation" Wi-Fi blocks device discovery completely. Use the IP link shown in the app.
 
 The only outgoing request is the schedule download, a single JSON file from the same feed [OnlyT](https://github.com/AntonyCorbett/OnlyT) uses.
 
