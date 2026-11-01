@@ -120,10 +120,10 @@
   [data-state="ten"].clock::after { box-shadow: inset 0 0 0 3px var(--danger); animation: flash .8s ease-in-out infinite; }
   [data-state="up"].clock::after { box-shadow: inset 0 0 0 4px var(--danger); animation: flash .7s ease-in-out infinite; }
   .popup { position: absolute; top: 0; left: 50%; transform: translate(-50%, -40%); opacity: 0; padding: 6px 16px; border-radius: var(--radius-pill); font-weight: var(--weight-bold); font-size: 15px; white-space: nowrap;
-    background: var(--warn); color: #1b1200; box-shadow: var(--shadow); transition: transform .3s var(--ease-pop), opacity .2s; pointer-events: none; z-index: 2; }
-  .popup.show { transform: translate(-50%, 0); opacity: 1; }
+    background: var(--warn); color: #1b1200; box-shadow: var(--shadow); transition: transform .3s var(--ease-pop), opacity .2s, visibility 0s .3s; pointer-events: none; z-index: 2; visibility: hidden; }
+  .popup.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; transition-delay: 0s; }
   .popup[data-kind="ten"], .popup[data-kind="up"] { background: var(--danger); color: var(--on-danger); }
-  .popup[data-kind="up"] { animation: flash .7s ease-in-out infinite; }
+  .popup.show[data-kind="up"] { animation: flash .7s ease-in-out infinite; }
 
   .main { display: flex; gap: var(--space-3); margin-top: var(--space-6); } /* room for the warning frame around the clock */
   .main button { min-height: var(--tap-main); padding: 0 var(--space-5); border-radius: var(--radius-pill); font-size: var(--text-md); font-weight: var(--weight-bold); border: 1.5px solid var(--line); background: var(--page); transition: transform .12s ease-out; }
