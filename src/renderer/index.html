@@ -128,6 +128,8 @@
           <div class="seg" id="mode"><button data-v="auto">Auto</button><button data-v="midweek">Midweek</button><button data-v="weekend">Weekend</button></div></div>
         <div class="row"><div class="lbl"><b>Circuit overseer’s visit</b><span>Changes the parts for this week</span></div><label class="chk"><input type="checkbox" role="switch" id="circuit" aria-label="Circuit overseer’s visit"></label></div>
         <div class="row"><div class="lbl"><b>Schedule</b><span id="schedDesc"></span></div><button id="refresh">Refresh</button></div>
+        <div class="row"><div class="lbl"><b>Midweek starts at</b><span>Leave empty to work it out from the first part</span></div><input type="time" id="stMidweek"></div>
+        <div class="row"><div class="lbl"><b>Weekend starts at</b><span>Songs and prayers vary, so this is where the schedule and adaptive timing start from</span></div><input type="time" id="stWeekend"></div>
         <div class="row"><div class="lbl"><b>Adaptive timing</b><span id="adDesc"></span></div>
           <div class="seg" id="adaptive"><button data-v="none">Off</button><button data-v="oneWay">Shorten</button><button data-v="twoWay">Both</button></div></div>
       </div>

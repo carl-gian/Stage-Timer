@@ -100,6 +100,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     adjust: (b) => service.timer.adjust(Number(b.deltaSeconds) || 0),
     refresh: () => service.loadSchedule({ force: true }),
     report: () => service.makeReport(),
+    startAt: (b) => service.setStartOverride(b.time),
     scene: (b) => service.setPartScene({ key: String(b.key), scene: b.scene, kind: b.kind }),
   };
 

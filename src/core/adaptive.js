@@ -83,6 +83,7 @@ class AdaptivePlanner {
     this.mode = mode;
     this.type = type;
     this.meetingStartMs = null;
+    this.startProvider = null; // () => ms | null: a start time that was set, instead of guessing it from the first part
   }
 
   reset(type) {
@@ -92,13 +93,17 @@ class AdaptivePlanner {
 
   /** Call when a part is actually started: the first part of the meeting pins the start time. */
   noteStart(item, nowMs) {
-    if (this.meetingStartMs == null && (STARTERS[this.type] || []).includes(item.key)) {
+    if (this._fixedStart() == null && this.meetingStartMs == null && (STARTERS[this.type] || []).includes(item.key)) {
       this.meetingStartMs = nearest15Before(nowMs);
     }
   }
 
+  _fixedStart() {
+    return this.startProvider ? this.startProvider() : null;
+  }
+
   evaluate(items, item, nowMs) {
-    const args = { items, item, mode: this.mode, meetingStartMs: this.meetingStartMs, nowMs };
+    const args = { items, item, mode: this.mode, meetingStartMs: this._fixedStart() ?? this.meetingStartMs, nowMs };
     return { adaptedSecs: adaptedSecs(args), overrunSecs: overrunSecs(args) };
   }
 }

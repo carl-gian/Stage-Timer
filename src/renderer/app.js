@@ -29,6 +29,7 @@ function paint(d) {
   $('mtDesc').textContent = `Today: ${d.meetingType === 'weekend' ? 'weekend' : 'midweek'} meeting` + (d.settings.meetingMode === 'auto' ? ' (detected from the day)' : '');
   document.querySelectorAll('#adaptive button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.adaptiveMode));
   $('adDesc').textContent = AD_DESC[d.settings.adaptiveMode] || '';
+  for (const [id, t] of [['stMidweek', 'midweek'], ['stWeekend', 'weekend']]) if (document.activeElement !== $(id)) $(id).value = d.settings.startTimes[t];
   $('circuit').checked = d.settings.circuitVisit;
   $('showClock').checked = d.settings.showClock;
   document.querySelectorAll('#theme button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.theme));
@@ -192,6 +193,7 @@ document.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = () => {
 document.querySelectorAll('[data-open]').forEach((b) => (b.onclick = () => window.stage.open(data.urls[b.dataset.open])));
 document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => save({ meetingMode: b.dataset.v })));
 document.querySelectorAll('#adaptive button').forEach((b) => (b.onclick = () => save({ adaptiveMode: b.dataset.v })));
+for (const [id, t] of [['stMidweek', 'midweek'], ['stWeekend', 'weekend']]) $(id).onchange = () => save({ startTimes: { [t]: $(id).value } });
 $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
 $('showClock').onchange = (e) => save({ showClock: e.target.checked });
 document.querySelectorAll('#clockFormat button').forEach((b) => (b.onclick = () => save({ clockFormat: b.dataset.v })));

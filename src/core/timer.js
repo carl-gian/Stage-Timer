@@ -50,6 +50,12 @@ class StageTimer extends EventEmitter {
     this._changed();
   }
 
+  /** The meeting's start time changed: recompute the current part's adapted time and tell everyone. */
+  refreshPlan() {
+    this._refreshAdaptive();
+    this._changed();
+  }
+
   setAdaptiveMode(mode) {
     this.planner.mode = mode;
     this._refreshAdaptive();

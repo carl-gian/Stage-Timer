@@ -21,7 +21,8 @@ Everything stays in sync. Start a part on the phone and the OBS dock and the spe
 - **Automatic schedule.** Fetches the week's parts and times (cached for offline use). Midweek or weekend is picked from the day, with a manual override and a circuit visit option.
 - **Control from anywhere.** Start, Stop, Pause, Reset, ±30 s / ±1 min, and choose any part, from a phone, tablet or browser. Protected by a PIN.
 - **OBS dock.** A compact control panel you can dock inside OBS, with a hidden Connect panel (QR code + PIN), a Report button and a button that opens the app's settings.
-- **Speaker's screen (display page).** A big, readable timer for any screen. It opens in your browser by default, or fullscreen on another monitor (for example a third screen) if you pick one under Advanced → *Show speaker's screen on*. Press Esc to close it.
+- **Speaker's screen (display page).** A big, readable timer for any screen. With no timer going, it shows just the time of day. It opens in your browser by default, or fullscreen on another monitor (for example a third screen) if you pick one under Advanced → *Show speaker's screen on*. Press Esc to close it.
+- **Meeting start time** (optional). Set when the meeting starts, for midweek and weekend. Each part shows its scheduled time, and the control page shows how far ahead or behind the meeting is, with the scheduled end. Songs and prayers aren't timed, so the end is a reference rather than a deadline. Adaptive timing measures from this start time too.
 - **Current time** (optional). Show the time of day, in a 12- or 24-hour clock, on the control page and on the speaker's screen between parts.
 - **Light, dark or automatic theme** for the control page and app window. The speaker's screen and OBS dock stay dark.
 - **Follows the calendar.** Left running in the tray, it switches between the midweek and weekend meeting and loads the new week's parts by itself, never while a part is running or paused.

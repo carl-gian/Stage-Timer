@@ -285,3 +285,41 @@ test('network: status and refresh work, with or without a friendly name', async 
   assert.strictEqual((await server.refreshNetwork()).name, null);
   await server.close();
 });
+
+test('start time: set per meeting type, overridden for one meeting, and used as the base', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  const wed = new Date('2026-10-28T18:40:00'); // a Wednesday
+  const service = new StageService({ dataDir: dir, now: () => wed });
+  assert.strictEqual(service.baseStart(), null); // nothing set: worked out from the first part, as before
+
+  await service.updateSettings({ startTimes: { midweek: '19:00' } });
+  await service.updateSettings({ startTimes: { weekend: 'soon' } }); // junk is dropped, the other one is kept
+  assert.deepStrictEqual(service.settings.startTimes, { midweek: '19:00', weekend: '' });
+  const b = service.baseStart();
+  assert.deepStrictEqual([b.time, b.source, b.ms], ['19:00', 'set', new Date('2026-10-28T19:00:00').getTime()]);
+  assert.strictEqual(service.snapshot().base.time, '19:00');
+
+  assert.strictEqual(service.setStartOverride('25:99'), false);
+  assert.strictEqual(service.setStartOverride('19:30'), true);
+  assert.deepStrictEqual([service.baseStart().time, service.baseStart().source], ['19:30', 'override']);
+
+  const next = new StageService({ dataDir: dir, now: () => new Date('2026-11-04T18:40:00') }); // the next week
+  assert.deepStrictEqual([next.baseStart().time, next.baseStart().source], ['19:00', 'set']);
+  const same = new StageService({ dataDir: dir, now: () => new Date('2026-10-28T18:50:00') }); // restarted the same day
+  assert.strictEqual(same.baseStart().time, '19:30');
+  assert.strictEqual(same.setStartOverride(''), true);
+  assert.strictEqual(same.baseStart().time, '19:00');
+});
+
+test('start time: adaptive timing measures from the set start, not from when the first part was pressed', async () => {
+  const { StageTimer } = require('../src/core/timer');
+  const items = buildSchedule({ type: 'midweek', meeting: null }).map((i, n) => ({ id: n + 1, ...i }));
+  let nowMs = new Date('2026-10-28T19:45:00').getTime(); // 45 minutes after a 7:00 start
+  const timer = new StageTimer({ now: () => nowMs, adaptiveMode: 'twoWay' });
+  timer.planner.startProvider = () => new Date('2026-10-28T19:00:00').getTime();
+  timer.setSchedule(items, { meetingType: 'midweek' });
+  const living = items.find((i) => i.key === 'living1');
+  timer.select(living.id);
+  const it = timer.items.find((i) => i.id === living.id);
+  assert.ok(it.adaptedSecs > it.durationSecs, 'ahead of schedule: the part is lengthened'); // no first part was ever started
+});

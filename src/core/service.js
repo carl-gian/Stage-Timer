@@ -12,6 +12,7 @@ const { SceneSwitcher, DEFAULT_SETTLE_MS } = require('./sceneSwitcher');
 const { buildReport, ReportStore, REPORT_AFTER } = require('./report');
 
 const MEETING_TYPES = ['midweek', 'weekend'];
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24-hour HH:MM, as saved
 
 const randomPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
 const NO_NETWORK = async () => { throw new Error('not downloading now'); }; // for a quick load from the saved copy
@@ -52,12 +53,19 @@ class StageService extends EventEmitter {
       showClock: false, // current time on the control page, and on the display between parts
       clockFormat: '12h', // 12h | 24h
       theme: 'auto', // auto (follow Windows) | light | dark: control page and settings window
+      startTimes: { midweek: '', weekend: '' }, // when the meeting starts (HH:MM); empty = work it out from the first part
+      startOverride: { key: '', time: '' }, // a different start time for one meeting only (key = which meeting and week)
       ...this._readSettings(),
     };
     for (const k of ['obsScenes', 'obsCounselScenes']) if (!this.settings[k] || typeof this.settings[k] !== 'object') this.settings[k] = {};
+    this._cleanStartTimes();
     this._saveSettings();
 
     this.timer = new StageTimer({ now: () => Date.now(), closingSecs: this.settings.closingSecs, adaptiveMode: this.settings.adaptiveMode });
+    this.timer.planner.startProvider = () => {
+      const b = this.baseStart();
+      return b ? b.ms : null;
+    };
     this.status = { source: 'none', loading: false };
 
     this.obs = new ObsClient({ WebSocketImpl });
@@ -81,7 +89,48 @@ class StageService extends EventEmitter {
       counsel: this.settings.obsCounselScenes[mt] || {},
     };
     const clock = { show: this.settings.showClock, format: this.settings.clockFormat };
-    return { ...this.timer.snapshot(), obs, report: this.latestReport, clock, theme: this.settings.theme };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), clock, theme: this.settings.theme };
+  }
+
+  /** Keeps only valid HH:MM start times. */
+  _cleanStartTimes() {
+    const st = this.settings.startTimes && typeof this.settings.startTimes === 'object' ? this.settings.startTimes : {};
+    this.settings.startTimes = Object.fromEntries(MEETING_TYPES.map((t) => [t, TIME_RE.test(String(st[t])) ? String(st[t]) : '']));
+    const ov = this.settings.startOverride;
+    this.settings.startOverride = ov && typeof ov === 'object' && TIME_RE.test(String(ov.time)) && typeof ov.key === 'string' ? { key: ov.key, time: ov.time } : { key: '', time: '' };
+  }
+
+  /**
+   * The start time everything is measured from: { time: 'HH:MM', source: 'override' | 'set', ms } for today, or null when
+   * none was set (the start is then worked out from the first part, as before).
+   */
+  baseStart() {
+    const ov = this.settings.startOverride;
+    const type = this.meetingType;
+    let time = '';
+    let source = null;
+    if (ov.time && ov.key === this._scheduleKey()) {
+      time = ov.time;
+      source = 'override';
+    } else if (this.settings.startTimes[type]) {
+      time = this.settings.startTimes[type];
+      source = 'set';
+    }
+    if (!time) return null;
+    const [h, m] = time.split(':').map(Number);
+    const d = this.nowDate();
+    return { time, source, ms: new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0).getTime() };
+  }
+
+  /** A start time for this meeting only ('' puts back the saved one). */
+  setStartOverride(time) {
+    const t = String(time ?? '');
+    if (t !== '' && !TIME_RE.test(t)) return false;
+    this.settings.startOverride = t ? { key: this._scheduleKey(), time: t } : { key: '', time: '' };
+    this._saveSettings();
+    this.timer.refreshPlan();
+    this.emit('settings');
+    return true;
   }
 
   /** Writes an over/under report for every part timed so far. `trigger` is the part it follows (null = on request). */
@@ -269,9 +318,10 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen', 'startTimes'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
+    if (patch.startTimes && typeof patch.startTimes === 'object') this.settings.startTimes = { ...before.startTimes, ...patch.startTimes };
 
     this.settings.port = Math.min(65535, Math.max(1, parseInt(this.settings.port, 10) || before.port));
     this.settings.closingSecs = Math.min(600, Math.max(0, parseInt(this.settings.closingSecs, 10) || 0));
@@ -298,6 +348,7 @@ class StageService extends EventEmitter {
     this.settings.obsDefaultScene = typeof fallback === 'string' && fallback.length <= 256 ? fallback : before.obsDefaultScene;
     const counsel = this.settings.obsCounselScene;
     this.settings.obsCounselScene = typeof counsel === 'string' && counsel.length <= 256 ? counsel : before.obsCounselScene;
+    this._cleanStartTimes();
     this._saveSettings();
 
     this.timer.setClosingSecs(this.settings.closingSecs);

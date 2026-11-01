@@ -1,6 +1,17 @@
-# Stage Timer 1.2.1
+# Stage Timer 1.2.2
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.2.2
+
+- **The speaker's screen shows the time when no timer is going.** Before a part is started, it shows just the time of day (12- or 24-hour, as you chose). When you press Start, it switches to the countdown.
+- **Set when the meeting starts.** Songs, prayers and the chairman's remarks vary, so the schedule can now start from a time you choose instead of a guess from the first part.
+  - **Settings:** under *Meeting*, set *Midweek starts at* and *Weekend starts at*. Left empty, it works as before.
+  - **Just this week:** on the control page, *Meeting start → Starts at* sets a different time for one meeting only. *Use saved* puts the saved time back.
+  - **Each part shows its scheduled time** in the parts list.
+  - **Behind or ahead:** the control page shows *Starts in…*, then *2:10 behind* or *1:00 ahead*, with the *Scheduled end*. The end is a reference, not a promise, because songs and prayers aren't timed.
+  - **Adaptive timing** (when turned on) now measures from this start time.
+- **Fixed:** a second Stage Timer on the same network no longer stops the first from announcing its own `stage.local` name.
 
 ## What's new in 1.2.1
 
@@ -54,7 +65,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.2.1.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.2.2.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 
