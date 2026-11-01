@@ -9,7 +9,9 @@ const { Bonjour } = require('bonjour-service');
 function advertise({ hostname, port, onError = () => {} }) {
   // Without an error callback bonjour-service throws (and would crash the app) when a network is unreachable.
   const bonjour = new Bonjour({}, onError);
-  bonjour.publish({ name: 'Stage Timer', type: 'http', port, host: `${hostname}.local` });
+  // The service name must differ per link name: two Stage Timers on one network that were both called "Stage Timer"
+  // made the second one silently skip announcing its own (different) name.
+  bonjour.publish({ name: `Stage Timer (${hostname})`, type: 'http', port, host: `${hostname}.local` });
   return {
     hostname: `${hostname}.local`,
     stop: () =>
