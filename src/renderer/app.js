@@ -36,6 +36,9 @@ function paint(d) {
   $('clockDesc').textContent = d.settings.clockFormat === '24h' ? 'For example 19:30' : 'For example 7:30 PM';
   $('localNoPin').checked = d.settings.localNoPin;
   $('schedDesc').textContent = `${d.schedule.count} parts · ${SOURCE[d.schedule.source] || ''}`;
+  const n = d.network;
+  const ipLink = n.addresses.length ? `http://${n.addresses[0]}${n.port === 80 ? '' : ':' + n.port}/control` : null;
+  $('netDesc').textContent = (!n.name ? 'The friendly name is not available on this network. ' : n.resolves === 'here' ? `${n.name} leads to this computer. ` : n.resolves === 'elsewhere' ? `${n.name} leads to a different device right now (another Stage Timer on the network may be using the name). ` : '') + (ipLink ? `Always works: ${ipLink}` : 'No network connection found.');
   $('hostDesc').textContent = d.friendlyName ? `Other devices open ${d.friendlyName}` : 'Not available on this network — use the IP link';
   $('portDesc').textContent = `Running on port ${d.port}` + (d.port !== d.settings.port ? ` (${d.settings.port} was unavailable)` : '');
   if (!editing) {
@@ -192,6 +195,11 @@ document.querySelectorAll('#theme button').forEach((b) => (b.onclick = () => sav
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
 for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });
+$('refreshNet').onclick = async (e) => {
+  const b = e.target; b.disabled = true; b.textContent = 'Refreshing…';
+  await window.stage.refreshNetwork();
+  b.disabled = false; b.textContent = 'Refresh network'; refresh();
+};
 $('openDisplay').onclick = () => window.stage.openDisplay();
 $('displayScreen').onchange = (e) => save({ displayScreen: e.target.value });
 $('startHidden').onchange = (e) => save({ startHidden: e.target.checked });

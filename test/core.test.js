@@ -271,3 +271,17 @@ test('current-time clock text', () => {
   assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 19, 5), '24h'), { time: '19:05', ampm: '' });
   assert.deepStrictEqual(ST.clockTime(new Date(2026, 9, 31, 7, 5), '24h'), { time: '07:05', ampm: '' });
 });
+
+test('network: status and refresh work, with or without a friendly name', async () => {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')), now: () => new Date('2026-10-28T19:00:00') });
+  const server = createServer(service, { mdns: false });
+  const port = await server.start(45815);
+  const base = `http://127.0.0.1:${port}`;
+  const info = await (await fetch(base + '/api/network')).json();
+  assert.strictEqual(info.name, null); // no announcing in tests
+  assert.ok(Array.isArray(info.addresses));
+  const again = await (await fetch(base + '/api/network/refresh', { method: 'POST' })).json();
+  assert.strictEqual(again.port, port);
+  assert.strictEqual((await server.refreshNetwork()).name, null);
+  await server.close();
+});

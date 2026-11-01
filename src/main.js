@@ -48,6 +48,7 @@ async function info() {
     schedule: { source: service.timer.meta.scheduleSource, error: service.timer.meta.scheduleError, count: service.timer.items.length },
     timer: { running: service.timer.running, talk: service.timer.current && service.timer.current.name },
     obs: service.obsInfo(),
+    network: await server.networkInfo(),
     displays: screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: `Monitor ${i + 1}: ${d.size.width}×${d.size.height}${d.id === screen.getPrimaryDisplay().id ? ' (main)' : ''}` })),
     reports: service.reports.list().slice(0, 5),
     parts: service.timer.items.map((i) => ({ key: i.key, name: i.name, section: i.sectionTitle })),
@@ -149,6 +150,7 @@ function createTray() {
     Menu.buildFromTemplate([
       { label: 'Open Stage Timer', click: showWindow },
       { label: 'Open display', click: openDisplay },
+      { label: 'Refresh network', click: () => server.refreshNetwork() },
       { type: 'separator' },
       { label: 'Quit', click: () => { quitting = true; app.quit(); } },
     ]),
@@ -212,6 +214,7 @@ app.whenReady().then(async () => {
     return info();
   });
   ipcMain.handle('open-display', openDisplay);
+  ipcMain.handle('refresh-network', () => server.refreshNetwork());
   ipcMain.handle('copy', (_e, text) => clipboard.writeText(String(text)));
   ipcMain.handle('open', (_e, url) => {
     if (/^http:\/\/(localhost|\d+\.\d+\.\d+\.\d+)(:\d+)?\//.test(url)) shell.openExternal(url);

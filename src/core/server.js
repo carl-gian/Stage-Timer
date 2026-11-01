@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const dns = require('dns');
 const QRCode = require('qrcode');
 const { advertise } = require('./mdns');
 
@@ -32,6 +33,8 @@ function createServer(service, { mdns: useMdns = true } = {}) {
   const clients = new Set();
   let port = null; // the port we ended up on
   let mdns = null;
+  let seenAddresses = ''; // the network addresses the friendly name was announced with
+  let netWatch = null;
   const failures = new Map(); // ip -> {count, since}
 
   const send = (res, code, body) => {
@@ -143,6 +146,15 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       return send(res, 200, { ok: true });
     }
 
+    if (req.method === 'GET' && p === '/api/network') {
+      if (!authorised(req, res)) return;
+      return send(res, 200, await networkInfo());
+    }
+    if (req.method === 'POST' && p === '/api/network/refresh') {
+      if (!authorised(req, res)) return;
+      return send(res, 200, await refreshNetwork());
+    }
+
     if (req.method === 'POST' && p === '/api/auth') {
       return authorised(req, res) && send(res, 200, { ok: true });
     }
@@ -187,6 +199,40 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     };
   }
 
+  function startMdns() {
+    try {
+      mdns = advertise({ hostname: service.settings.hostname, port, onError: () => {} });
+    } catch {
+      mdns = null; // no friendly name; the IP link still works
+    }
+    seenAddresses = lanAddresses().join();
+  }
+
+  /** What other devices will find: the friendly name, this computer's addresses, and whether the name leads here. */
+  async function networkInfo() {
+    const addresses = lanAddresses();
+    const name = mdns ? mdns.hostname : null;
+    let resolves = 'unknown'; // 'here' | 'elsewhere' | 'unknown'
+    if (name) {
+      try {
+        const r = await Promise.race([dns.promises.lookup(name, { family: 4 }), new Promise((_, no) => setTimeout(no, 2500))]);
+        resolves = addresses.includes(r.address) ? 'here' : 'elsewhere';
+      } catch {
+        resolves = 'unknown';
+      }
+    }
+    return { name, addresses, resolves, port };
+  }
+
+  /** Announces the friendly name again, with the addresses this computer has now (after Wi-Fi changes, sleep, a new IP). */
+  async function refreshNetwork() {
+    if (!useMdns || port === null) return networkInfo();
+    if (mdns) await mdns.stop();
+    mdns = null;
+    startMdns();
+    return networkInfo();
+  }
+
   function tryListen(p) {
     return new Promise((resolve, reject) => {
       const onError = (err) => reject(err);
@@ -215,17 +261,18 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       }
       if (port === null) throw lastErr;
 
-      const hostname = service.settings.hostname;
       if (!useMdns) return port;
-      try {
-        mdns = advertise({ hostname, port, onError: () => {} });
-      } catch {
-        mdns = null; // no friendly name; the IP link still works
-      }
+      startMdns();
+      // A new Wi-Fi network or IP address would leave the announced name pointing at the old one: announce again.
+      netWatch = setInterval(() => {
+        if (lanAddresses().join() !== seenAddresses) refreshNetwork().catch(() => {});
+      }, 10 * 1000);
+      netWatch.unref();
       return port;
     },
     async close() {
       clearInterval(heartbeat);
+      clearInterval(netWatch);
       service.timer.off('change', broadcast);
       service.off('obs', broadcast);
       service.off('report', broadcast);
@@ -244,6 +291,8 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       return mdns ? mdns.hostname : null;
     },
     urls,
+    refreshNetwork,
+    networkInfo,
   };
 }
 
