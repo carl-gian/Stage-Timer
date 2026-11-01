@@ -134,7 +134,7 @@ function createTray() {
 app.whenReady().then(async () => {
   service = new StageService({ dataDir: app.getPath('userData') });
   await service.loadSchedule();
-  setInterval(() => service.refreshForToday(), 60 * 1000); // the app can stay in the tray for days
+  setInterval(() => service.refreshForToday(), 5 * 1000); // the app can stay in the tray for days; a cheap check
   service.startObs();
   await startServer();
   service.on('report', (report) => savePdf(report).catch((err) => console.error('Could not save the report PDF:', err)));

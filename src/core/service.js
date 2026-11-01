@@ -14,6 +14,7 @@ const { buildReport, ReportStore, REPORT_AFTER } = require('./report');
 const MEETING_TYPES = ['midweek', 'weekend'];
 
 const randomPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
+const NO_NETWORK = async () => { throw new Error('not downloading now'); }; // for a quick load from the saved copy
 
 /** Owns settings, the schedule and the timer. UI-agnostic so it also runs headless. */
 class StageService extends EventEmitter {
@@ -185,26 +186,41 @@ class StageService extends EventEmitter {
     return m === 'midweek' || m === 'weekend' ? m : detectMeetingType(this.nowDate());
   }
 
-  /** Builds the schedule for the current meeting type (downloading the feed for midweek). */
-  async loadSchedule({ force = false } = {}) {
+  /**
+   * Builds the schedule for the current meeting type (downloading the feed for midweek).
+   * `offline`: use only the saved copy or default times, never wait for a download; returns `needsDownload` when
+   * this week's parts should still be fetched. `onlyIf`: checked once the download is done; false leaves the parts alone.
+   */
+  async loadSchedule({ force = false, offline = false, onlyIf = null } = {}) {
     const type = this.meetingType;
     this.loadedFor = this._scheduleKey();
     this.status = { ...this.status, loading: true };
     let meeting = null;
     let source = 'n/a';
     let error;
+    let needsDownload = false;
 
     if (type === 'midweek') {
       const r = await getMeetingForWeek({
         feedUrl: this.settings.feedUrl,
         cachePath: this.cachePath,
         now: this.nowDate(),
-        fetchImpl: this.fetchImpl,
+        fetchImpl: offline ? NO_NETWORK : this.fetchImpl,
         force,
       });
       meeting = r.meeting;
       source = meeting ? r.source : 'none';
       error = r.error;
+      if (offline && r.source !== 'cache') {
+        needsDownload = true;
+        source = 'pending';
+        error = undefined;
+      }
+    }
+
+    if (onlyIf && !onlyIf()) {
+      this.status = { ...this.status, loading: false };
+      return { skipped: true };
     }
 
     const items = buildSchedule({ type, meeting, circuitVisit: this.settings.circuitVisit });
@@ -216,6 +232,7 @@ class StageService extends EventEmitter {
       scheduleError: error || null,
     });
     this.emit('settings');
+    return { needsDownload };
   }
 
   /** Which meeting and week the schedule is for: a change means a different set of parts. */
@@ -223,14 +240,31 @@ class StageService extends EventEmitter {
     return `${this.meetingType} ${mondayKey(this.nowDate())}`;
   }
 
+  _underway() {
+    return this.timer.running || this.timer.elapsedMs() > 0;
+  }
+
   /**
-   * Called every minute: the app can stay in the tray for days, so when the day brings a different meeting or a new
-   * week, that schedule is loaded. Never while a part is running or paused; it is tried again on the next call.
+   * Called every few seconds: the app can stay in the tray for days, so when the day brings a different meeting or a
+   * new week, that schedule is loaded. Never while a part is running or paused; it is tried again on the next call.
+   * The switch happens at once with what is saved here; this week's parts are downloaded after, if needed.
    */
   async refreshForToday() {
     if (this.status.loading || this._scheduleKey() === this.loadedFor) return;
-    if (this.timer.running || this.timer.elapsedMs() > 0) return;
-    await this.loadSchedule();
+    if (this._underway()) return;
+    const { needsDownload } = await this.loadSchedule({ offline: true });
+    if (needsDownload) this.pendingDownload = this._downloadWeek(this.loadedFor);
+  }
+
+  /** Downloads the week and swaps its parts in, unless a part has started meanwhile or the day moved on. */
+  async _downloadWeek(key) {
+    const r = await this.loadSchedule({ onlyIf: () => this._scheduleKey() === key && !this._underway() });
+    if (r.skipped && this._scheduleKey() === key) {
+      // A part started while downloading: keep the default times; the control page offers "Try again"
+      this.status = { ...this.status, source: 'none' };
+      this.timer.meta.scheduleSource = 'none';
+      this.emit('settings');
+    }
   }
 
   async updateSettings(patch) {

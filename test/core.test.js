@@ -203,6 +203,45 @@ test('a new day: the right meeting is loaded, but never while a part is running 
   assert.strictEqual(service.timer.currentId, 1);
 });
 
+test('a new day switches meeting at once, and the week downloads after', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  let today = new Date(2026, 9, 25, 12); // Sunday
+  let release;
+  const slow = () => new Promise((resolve) => (release = () => resolve({ ok: true, text: async () => JSON.stringify(feedList) })));
+  const service = new StageService({ dataDir: dir, now: () => today, fetchImpl: slow });
+  await service.loadSchedule();
+  assert.strictEqual(service.timer.meta.meetingType, 'weekend');
+
+  today = new Date(2026, 9, 26, 12); // Monday: switch without waiting for the download
+  await service.refreshForToday();
+  assert.strictEqual(service.timer.meta.meetingType, 'midweek');
+  assert.strictEqual(service.timer.meta.scheduleSource, 'pending');
+  const quick = service.timer.items;
+  release();
+  await service.pendingDownload;
+  assert.strictEqual(service.timer.meta.scheduleSource, 'network');
+  assert.notStrictEqual(service.timer.items, quick); // this week's downloaded parts replaced the stand-ins
+});
+
+test('a downloaded week never replaces the parts once one is under way', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
+  let today = new Date(2026, 9, 25, 12);
+  let release;
+  const slow = () => new Promise((resolve) => (release = () => resolve({ ok: true, text: async () => JSON.stringify(feedList) })));
+  const service = new StageService({ dataDir: dir, now: () => today, fetchImpl: slow });
+  await service.loadSchedule();
+  today = new Date(2026, 9, 26, 12);
+  await service.refreshForToday();
+  const before = service.timer.items;
+  service.timer.select(before[1].id);
+  service.timer.start();
+  release();
+  await service.pendingDownload;
+  assert.strictEqual(service.timer.items, before);
+  assert.strictEqual(service.timer.running, true);
+  assert.strictEqual(service.timer.meta.scheduleSource, 'none'); // the control page offers "Try again"
+});
+
 test('current-time clock: off by default, 12- or 24-hour, sent to the pages', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-'));
   const service = new StageService({ dataDir: dir, fetchImpl: async () => { throw new Error('offline'); } });

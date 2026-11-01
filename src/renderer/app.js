@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 let data = null;
 let editing = false;
 
-const SOURCE = { network: 'Downloaded just now', cache: 'Loaded from saved copy', 'stale-cache': 'Offline — using saved copy', none: 'Couldn’t download — using default times', 'n/a': 'Fixed times (no download needed)' };
+const SOURCE = { pending: 'Downloading this week’s parts…', network: 'Downloaded just now', cache: 'Loaded from saved copy', 'stale-cache': 'Offline — using saved copy', none: 'Couldn’t download — using default times', 'n/a': 'Fixed times (no download needed)' };
 
 const AD_DESC = {
   none: 'Parts always use their planned time',
