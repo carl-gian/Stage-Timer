@@ -473,11 +473,11 @@
         const e = end && ST.clockTime(end, state.clock.format);
         $('ends').textContent = e ? 'Meeting ends around ' + e.time + (e.ampm ? ' ' + e.ampm : '') : '';
       }
-      // Mirror of the speaker's screen (between parts it shows the time when the clock is on)
-      const between = showNow && v.state === 'idle';
+      // Mirror of the speaker's screen (with no timer going it shows just the time)
+      const between = v.state === 'idle';
       $('pv').dataset.state = between ? 'now' : v.state;
-      $('pvName').textContent = between ? 'Current time' : (state.talk ? state.talk.name : 'No schedule');
-      if (between) putClock($('pvTime'), ST.clockTime(new Date(nowMs), state.clock.format));
+      $('pvName').textContent = between ? '' : (state.talk ? state.talk.name : 'No schedule');
+      if (between) putClock($('pvTime'), ST.clockTime(new Date(nowMs), state.clock ? state.clock.format : '12h'));
       else $('pvTime').textContent = v.text;
       setPill($('stLive'), online ? 'ok' : 'danger', online ? 'Live' : 'Reconnecting');
       const orig = state.items.find((i) => i.id === state.currentId);

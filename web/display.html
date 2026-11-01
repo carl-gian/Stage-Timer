@@ -26,8 +26,7 @@
   .up { font-size: 4.2vmin; color: var(--text-dim); text-align: center; padding: 0 4vw; display: none; }
   .up b { color: var(--text); font-weight: var(--weight-bold); }
   body.now .time { color: var(--text); font-weight: var(--weight-bold); }
-  body.now .up { display: block; }
-  body.now .name, body.now .bar { display: none; }
+  body.now .section, body.now .name, body.now .bar, body.now .up { display: none; }
 
   /* Colour by stage (red stays darker than amber, so they differ in brightness too) */
   [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--text-dim); }
@@ -99,18 +98,14 @@
     if (last) {
       const v = ST.view(last, conn.offset());
       document.body.dataset.state = v.state;
-      // Between parts (nothing started yet) the current time can stand in for a frozen countdown.
-      const now = !!(last.clock && last.clock.show) && v.state === 'idle';
+      // With no timer going (nothing started yet), the screen shows just the time of day.
+      const now = v.state === 'idle';
       document.body.classList.toggle('now', now);
       $('name').textContent = last.talk ? last.talk.name : 'No schedule';
       if (now) {
-        const c = ST.clockTime(new Date(Date.now() + conn.offset()), last.clock.format);
-        $('section').textContent = 'Current time';
+        const c = ST.clockTime(new Date(Date.now() + conn.offset()), last.clock ? last.clock.format : '12h');
         $('time').textContent = c.time;
         if (c.ampm) $('time').appendChild(document.createElement('small')).textContent = c.ampm;
-        $('up').style.visibility = last.talk ? '' : 'hidden';
-        $('upName').textContent = last.talk ? last.talk.name : '';
-        $('upDur').textContent = ' · ' + ST.fmt(last.targetSecs);
       } else {
         $('section').textContent = last.talk ? last.talk.section : '';
         $('time').textContent = elapsedMode ? ST.fmt(ST.elapsed(last, conn.offset()) / 1000) : v.text;
