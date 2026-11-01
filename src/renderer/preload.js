@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('stage', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
   refreshSchedule: () => ipcRenderer.invoke('refresh-schedule'),
   copy: (t) => ipcRenderer.invoke('copy', t),
+  openPort: () => ipcRenderer.invoke('open-port'),
   refreshNetwork: () => ipcRenderer.invoke('refresh-network'),
   openDisplay: () => ipcRenderer.invoke('open-display'),
   open: (u) => ipcRenderer.invoke('open', u),

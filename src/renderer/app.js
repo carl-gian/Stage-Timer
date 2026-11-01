@@ -39,6 +39,10 @@ function paint(d) {
   const n = d.network;
   const ipLink = n.addresses.length ? `http://${n.addresses[0]}${n.port === 80 ? '' : ':' + n.port}/control` : null;
   $('netDesc').textContent = (!n.name ? 'The friendly name is not available on this network. ' : n.resolves === 'here' ? `${n.name} leads to this computer. ` : n.resolves === 'elsewhere' ? `${n.name} leads to a different device right now (another Stage Timer on the network may be using the name). ` : '') + (ipLink ? `Always works: ${ipLink}` : 'No network connection found.');
+  const fw = n.firewall;
+  $('portRow').style.display = fw.supported ? '' : 'none';
+  $('fwDesc').textContent = fw.state === 'open' ? `Windows Firewall allows other devices to reach port ${n.port}.` : fw.state === 'closed' ? `Windows Firewall may be blocking other devices. Press Open port and choose Yes when Windows asks.` : 'Could not check Windows Firewall. Press Open port if other devices cannot connect.';
+  $('openPort').textContent = fw.state === 'open' ? 'Open again' : 'Open port';
   $('hostDesc').textContent = d.friendlyName ? `Other devices open ${d.friendlyName}` : 'Not available on this network — use the IP link';
   $('portDesc').textContent = `Running on port ${d.port}` + (d.port !== d.settings.port ? ` (${d.settings.port} was unavailable)` : '');
   if (!editing) {
@@ -195,6 +199,13 @@ document.querySelectorAll('#theme button').forEach((b) => (b.onclick = () => sav
 $('localNoPin').onchange = (e) => save({ localNoPin: e.target.checked });
 $('obsOn').onchange = (e) => save({ obsEnabled: e.target.checked });
 for (const [id, field] of [['obsUrl', 'obsUrl'], ['obsPassword', 'obsPassword'], ['obsSettle', 'obsSettleMs']]) $(id).onchange = () => save({ [field]: $(id).value });
+$('openPort').onclick = async (e) => {
+  const b = e.target; b.disabled = true; b.textContent = 'Waiting for Windows…';
+  const r = await window.stage.openPort();
+  b.disabled = false;
+  if (!r.ok) $('err').textContent = r.error || 'Could not open the port.'; else $('err').textContent = '';
+  refresh();
+};
 $('refreshNet').onclick = async (e) => {
   const b = e.target; b.disabled = true; b.textContent = 'Refreshing…';
   await window.stage.refreshNetwork();

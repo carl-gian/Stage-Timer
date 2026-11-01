@@ -9,8 +9,10 @@ const { createServer } = require('./core/server');
 const { UpdateManager } = require('./core/updates');
 const { pdfName } = require('./core/report');
 const { renderPdf, uniquePath } = require('./pdf');
+const { createFirewall } = require('./firewall');
 
 let service, server, win, tray, updates, displayWin;
+const firewall = createFirewall();
 let serverError = null;
 let quitting = false;
 const qrCache = new Map();
@@ -48,7 +50,7 @@ async function info() {
     schedule: { source: service.timer.meta.scheduleSource, error: service.timer.meta.scheduleError, count: service.timer.items.length },
     timer: { running: service.timer.running, talk: service.timer.current && service.timer.current.name },
     obs: service.obsInfo(),
-    network: await server.networkInfo(),
+    network: { ...(await server.networkInfo()), firewall: { supported: firewall.supported, state: await firewall.status(server.port) } },
     displays: screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: `Monitor ${i + 1}: ${d.size.width}×${d.size.height}${d.id === screen.getPrimaryDisplay().id ? ' (main)' : ''}` })),
     reports: service.reports.list().slice(0, 5),
     parts: service.timer.items.map((i) => ({ key: i.key, name: i.name, section: i.sectionTitle })),
@@ -214,6 +216,10 @@ app.whenReady().then(async () => {
     return info();
   });
   ipcMain.handle('open-display', openDisplay);
+  ipcMain.handle('open-port', async () => {
+    const r = await firewall.open(server.port);
+    return { ...r, state: await firewall.status(server.port) };
+  });
   ipcMain.handle('refresh-network', () => server.refreshNetwork());
   ipcMain.handle('copy', (_e, text) => clipboard.writeText(String(text)));
   ipcMain.handle('open', (_e, url) => {
