@@ -1,6 +1,10 @@
-# Stage Timer 1.2.2
+# Stage Timer 1.2.3
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.2.3
+
+- **Fixed: "Time's up" stayed on screen after Stop.** The pop-up kept flashing at the top of the speaker's screen and the control page after a part was stopped. It now disappears as soon as you press Stop, Pause or Reset, or move to another part.
 
 ## What's new in 1.2.2
 
@@ -65,7 +69,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.2.2.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.2.3.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 
