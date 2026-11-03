@@ -9,16 +9,27 @@
   /* Options (URL query):  ?name=0  ?bar=0  ?mode=elapsed
      Always dark (class "stage" in steward.css): a white screen glares on stage and over OBS video. Never coral here. */
   * { box-sizing: border-box; }
+  /* Brighter warning tones for the big digits only: the shared --warn-text/--danger-text
+     are tuned for small text on a dark panel and read muddy at 38vmin across a hall. */
+  .stage { --warn-bright: #ffc855; --danger-bright: #ff9b90; }
   html, body { height: 100%; margin: 0; }
   body {
     background: var(--page); color: var(--text); overflow: hidden;
     font-family: var(--font); -webkit-font-smoothing: antialiased;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2vmin;
   }
-  .section { font-size: 2.6vmin; color: var(--brand); text-transform: uppercase; letter-spacing: .16em; font-weight: var(--weight-bold); }
+  /* Nothing may push the page wider than the screen, or flex centring shifts everything sideways
+     (shows up at phone width, where the section label is wider than the viewport). */
+  body > * { max-width: 100%; }
+  .section { font-size: max(2.6vmin, 11px); color: var(--brand); text-transform: uppercase; letter-spacing: .16em; font-weight: var(--weight-bold); text-align: center; padding: 0 4vw; }
   .name { font-size: 5vmin; color: var(--text-dim); font-weight: var(--weight-medium); text-align: center; padding: 0 4vw; }
-  .time { font-size: 30vmin; font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color .2s; }
-  .bar { width: 70vw; height: 1.6vmin; background: var(--surface); border-radius: 99px; overflow: hidden; }
+  /* Big and bright: the speaker reads this from the platform, often past the lectern lights.
+     vmin keeps it inside the shorter side; min() stops it overflowing a very wide screen. */
+  .time {
+    font-size: min(38vmin, 26vw); font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; transition: color .2s; color: var(--text);
+  }
+  .bar { width: 70vw; flex: none; height: max(1.6vmin, 6px); background: var(--surface); border-radius: 99px; overflow: hidden; }
   .bar > i { display: block; height: 100%; width: 0; background: var(--brand); transition: background .2s; }
 
   /* Current time between parts (Settings → Clock) */
@@ -29,9 +40,10 @@
   body.now .section, body.now .name, body.now .bar, body.now .up { display: none; }
 
   /* Colour by stage (red stays darker than amber, so they differ in brightness too) */
+  /* Running is full white; only idle and stopped go dim, so "dim" still means "not counting". */
   [data-state="idle"] .time, [data-state="stopped"] .time { color: var(--text-dim); }
-  [data-state="minute"] .time, [data-state="half"] .time { color: var(--warn-text); }
-  [data-state="ten"] .time, [data-state="up"] .time, [data-state="over"] .time { color: var(--danger-text); }
+  [data-state="minute"] .time, [data-state="half"] .time { color: var(--warn-bright); }
+  [data-state="ten"] .time, [data-state="up"] .time, [data-state="over"] .time { color: var(--danger-bright); }
   [data-state="minute"] .bar > i, [data-state="half"] .bar > i { background: var(--warn); }
   [data-state="ten"] .bar > i, [data-state="up"] .bar > i, [data-state="over"] .bar > i { background: var(--danger); }
 
@@ -42,7 +54,8 @@
   [data-state="ten"] .time { animation: flash .8s ease-in-out infinite; }
   [data-state="up"] .time { animation: flash .7s ease-in-out infinite; }
   @keyframes dim { 50% { opacity: .55; } }
-  @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
+  /* Dips to .35, not .12: the flash must still be obvious without hiding the digits. */
+  @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
   @keyframes glow { 0%, 100% { text-shadow: 0 0 .05em color-mix(in srgb, var(--warn) 15%, transparent); } 50% { text-shadow: 0 0 .3em color-mix(in srgb, var(--warn) 95%, transparent), 0 0 .8em color-mix(in srgb, var(--warn) 55%, transparent); } }
 
   /* Edge flash around the whole screen */

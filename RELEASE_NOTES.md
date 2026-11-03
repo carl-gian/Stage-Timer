@@ -1,6 +1,10 @@
-# Stage Timer 1.2.3
+# Stage Timer 1.2.4
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.2.4
+
+- **The speaker's countdown is bigger and brighter.** The time on the speaker's screen is larger and now shows in white while a part is running, so it is easier to read from the platform. The amber and red warnings are brighter too, and the flashing no longer dims the numbers so far that they are hard to read in the last seconds. A dim, grey time still means the timer is stopped or waiting.
 
 ## What's new in 1.2.3
 
@@ -69,7 +73,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.2.3.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.2.4.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 
