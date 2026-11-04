@@ -65,9 +65,24 @@
   [data-state="up"]::after { box-shadow: inset 0 0 13vmin color-mix(in srgb, var(--danger) 95%, transparent); animation: edge .7s ease-in-out infinite; }
   @keyframes edge { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 
+  /* Zoom raised hand: takes over the screen. The border glows amber, smoothly, in and out. */
+  .raise { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 3vmin; background: var(--page); text-align: center; padding: 0 6vw; }
+  .raise.show { display: flex; }
+  .raise::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    border: 2.4vmin solid var(--warn-bright, var(--warn));
+    box-shadow: inset 0 0 8vmin color-mix(in srgb, var(--warn) 85%, transparent), 0 0 6vmin color-mix(in srgb, var(--warn) 80%, transparent);
+    animation: raiseGlow 1.8s ease-in-out infinite;
+  }
+  .raise[data-mode="cancelled"]::after { display: none; }
+  .raise .big { font-size: min(13vmin, 8.5vw); font-weight: var(--weight-black); line-height: 1.05; color: var(--warn-bright, var(--warn)); letter-spacing: -0.02em; }
+  .raise .sub { font-size: min(6vmin, 5vw); font-weight: var(--weight-bold); color: var(--text); }
+  .raise[data-mode="cancelled"] .big { color: var(--text-dim); font-size: min(10vmin, 7vw); }
+  @keyframes raiseGlow { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+
   /* Pop-up message */
   .popup {
-    position: fixed; top: 6vmin; left: 50%; transform: translate(-50%, -140%); opacity: 0;
+    position: fixed; z-index: 30; top: 6vmin; left: 50%; transform: translate(-50%, -140%); opacity: 0;
     font-size: 6vmin; font-weight: var(--weight-bold); padding: 1.4vmin 4vmin; border-radius: 99px; white-space: nowrap;
     color: #1b1200; background: var(--warn); box-shadow: 0 1vmin 4vmin rgba(0,0,0,.4);
     transition: transform .35s var(--ease-pop), opacity .25s, visibility 0s .35s; pointer-events: none; visibility: hidden;
@@ -83,7 +98,7 @@
 
   /* Reduced motion: warnings turn steady; colour, edge and words still change */
   @media (prefers-reduced-motion: reduce) {
-    .time, .popup, body::after { animation: none !important; }
+    .time, .popup, body::after, .raise::after { animation: none !important; }
     [data-state="half"]::after, [data-state="ten"]::after, [data-state="up"]::after { opacity: 1; }
   }
 </style>
@@ -94,6 +109,7 @@
   <div class="time" id="time">0:00</div>
   <div class="bar" id="bar"><i id="fill"></i></div>
   <div class="up" id="up">Up next: <b id="upName"></b><span id="upDur"></span></div>
+  <div class="raise" id="raise"><div class="big" id="raiseBig"></div><div class="sub" id="raiseSub"></div></div>
   <div class="popup" id="popup"></div>
   <div class="offline">● reconnecting…</div>
 <script src="/client.js"></script>
@@ -108,8 +124,25 @@
   const conn = ST.connect((s) => { last = s; }, (ok) => document.body.classList.toggle('off', !ok));
   const alerter = ST.alerter($('popup'));
 
+  const RAISE = {
+    hand: ['✋ ZOOM Raise Hand', ''],
+    unmute: ['✋ ZOOM Raise Hand', 'Conductor: ask them to unmute'],
+    cancelled: ['Zoom raise hand cancelled', ''],
+  };
+  let raiseMode = '';
+  function drawRaise() {
+    const r = last.raise;
+    const mode = r && Date.now() + conn.offset() < r.endsAt + 1000 ? r.mode : ''; // a stale message never lingers
+    if (mode === raiseMode) return;
+    raiseMode = mode;
+    $('raise').classList.toggle('show', !!mode);
+    $('raise').dataset.mode = mode;
+    if (mode) { $('raiseBig').textContent = RAISE[mode][0]; $('raiseSub').textContent = RAISE[mode][1]; }
+  }
+
   function draw() {
     if (last) {
+      drawRaise();
       const v = ST.view(last, conn.offset());
       document.body.dataset.state = v.state;
       // With no timer going (nothing started yet), the screen shows just the time of day.

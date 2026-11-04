@@ -88,6 +88,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
   service.timer.on('change', broadcast);
   service.on('obs', broadcast);
   service.on('report', broadcast);
+  service.on('raise', broadcast);
   // Heartbeat: keeps connections alive and re-syncs clocks of any client that drifted.
   const heartbeat = setInterval(() => clients.size && broadcast(), 1000);
 
@@ -100,6 +101,10 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     adjust: (b) => service.timer.adjust(Number(b.deltaSeconds) || 0),
     refresh: () => service.loadSchedule({ force: true }),
     report: () => service.makeReport(),
+    raiseHand: () => service.raiseHand(),
+    raiseUnmute: () => service.raiseUnmute(),
+    raiseCancel: () => service.raiseCancel(),
+    raiseStop: () => service.raiseStop(),
     startAt: (b) => service.setStartOverride(b.time),
     scene: (b) => service.setPartScene({ key: String(b.key), scene: b.scene, kind: b.kind }),
   };
@@ -277,6 +282,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
       service.timer.off('change', broadcast);
       service.off('obs', broadcast);
       service.off('report', broadcast);
+      service.off('raise', broadcast);
       for (const c of clients) c.end();
       if (mdns) await mdns.stop();
       mdns = null;

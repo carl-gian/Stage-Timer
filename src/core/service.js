@@ -12,6 +12,8 @@ const { SceneSwitcher, DEFAULT_SETTLE_MS } = require('./sceneSwitcher');
 const { buildReport, ReportStore, REPORT_AFTER } = require('./report');
 
 const MEETING_TYPES = ['midweek', 'weekend'];
+const RAISE_SECS = 45; // how long a Zoom raised hand stays on the speaker's screen
+const CANCELLED_SECS = 5; // how long "cancelled" stays after Cancel
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24-hour HH:MM, as saved
 
 const randomPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
@@ -66,6 +68,8 @@ class StageService extends EventEmitter {
       const b = this.baseStart();
       return b ? b.ms : null;
     };
+    this.raise = null; // Zoom raised hand on the speaker's screen: { mode: 'hand' | 'unmute' | 'cancelled', endsAt }
+    this._raiseTimer = null;
     this.status = { source: 'none', loading: false };
 
     this.obs = new ObsClient({ WebSocketImpl });
@@ -89,7 +93,44 @@ class StageService extends EventEmitter {
       counsel: this.settings.obsCounselScenes[mt] || {},
     };
     const clock = { show: this.settings.showClock, format: this.settings.clockFormat };
-    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), clock, theme: this.settings.theme };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, clock, theme: this.settings.theme };
+  }
+
+  _setRaise(mode, secs) {
+    clearTimeout(this._raiseTimer);
+    this._raiseTimer = null;
+    this.raise = mode ? { mode, endsAt: Date.now() + secs * 1000 } : null;
+    if (mode) {
+      this._raiseTimer = setTimeout(() => this._setRaise(null), secs * 1000);
+      this._raiseTimer.unref();
+    }
+    this.emit('raise');
+  }
+
+  /** Shows "Zoom raise hand" on the speaker's screen; it goes away by itself after 45 seconds. */
+  raiseHand() {
+    this._setRaise('hand', RAISE_SECS);
+  }
+
+  /** Asks the conductor to tell the person to unmute. Keeps the same 45 seconds. */
+  raiseUnmute() {
+    if (!this.raise || this.raise.mode === 'cancelled') return;
+    clearTimeout(this._raiseTimer);
+    const secs = Math.max(0, (this.raise.endsAt - Date.now()) / 1000);
+    this.raise = { mode: 'unmute', endsAt: this.raise.endsAt };
+    this._raiseTimer = setTimeout(() => this._setRaise(null), secs * 1000);
+    this._raiseTimer.unref();
+    this.emit('raise');
+  }
+
+  /** "Zoom raise hand cancelled" for 5 seconds, then back to the timer. */
+  raiseCancel() {
+    if (this.raise && this.raise.mode !== 'cancelled') this._setRaise('cancelled', CANCELLED_SECS);
+  }
+
+  /** Straight back to the timer. */
+  raiseStop() {
+    if (this.raise) this._setRaise(null);
   }
 
   /** Keeps only valid HH:MM start times. */

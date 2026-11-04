@@ -323,3 +323,67 @@ test('start time: adaptive timing measures from the set start, not from when the
   const it = timer.items.find((i) => i.id === living.id);
   assert.ok(it.adaptedSecs > it.durationSecs, 'ahead of schedule: the part is lengthened'); // no first part was ever started
 });
+
+test('zoom raise hand: shows for 45 seconds, then Cancel, Stop and the unmute alert', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const events = [];
+  service.on('raise', () => events.push(service.raise && service.raise.mode));
+
+  assert.strictEqual(service.snapshot().raise, null);
+  service.raiseHand();
+  assert.strictEqual(service.snapshot().raise.mode, 'hand');
+  assert.strictEqual(service.raise.endsAt - Date.now(), 45000);
+  t.mock.timers.tick(44999);
+  assert.strictEqual(service.raise.mode, 'hand');
+  t.mock.timers.tick(1);
+  assert.strictEqual(service.raise, null); // gone by itself after 45 s
+
+  service.raiseHand(); // the unmute alert keeps the same 45 seconds
+  t.mock.timers.tick(10000);
+  const endsAt = service.raise.endsAt;
+  service.raiseUnmute();
+  assert.deepStrictEqual([service.raise.mode, service.raise.endsAt], ['unmute', endsAt]);
+  t.mock.timers.tick(35000);
+  assert.strictEqual(service.raise, null);
+
+  service.raiseHand(); // Cancel: "cancelled" for 5 seconds, then the timer
+  service.raiseCancel();
+  assert.strictEqual(service.raise.mode, 'cancelled');
+  t.mock.timers.tick(4999);
+  assert.strictEqual(service.raise.mode, 'cancelled');
+  t.mock.timers.tick(1);
+  assert.strictEqual(service.raise, null);
+
+  service.raiseHand(); // Stop: straight back to the timer
+  service.raiseStop();
+  assert.strictEqual(service.raise, null);
+
+  service.raiseUnmute(); // nothing showing: nothing to do
+  service.raiseCancel();
+  assert.strictEqual(service.raise, null);
+  service.raiseHand();
+  service.raiseCancel();
+  service.raiseUnmute(); // already cancelled: the alert does not bring it back
+  assert.strictEqual(service.raise.mode, 'cancelled');
+  assert.deepStrictEqual(events.slice(0, 3), ['hand', null, 'hand']);
+});
+
+test('zoom raise hand: the controller commands work over the API', async () => {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const server = createServer(service, { mdns: false });
+  const port = await server.start(45816);
+  const base = `http://127.0.0.1:${port}`;
+  const state = async () => (await fetch(base + '/api/state')).json();
+  const post = (cmd) => fetch(`${base}/api/timer/${cmd}`, { method: 'POST', headers: { 'x-pin': service.settings.pin } });
+  await post('raiseHand');
+  assert.strictEqual((await state()).raise.mode, 'hand');
+  await post('raiseUnmute');
+  assert.strictEqual((await state()).raise.mode, 'unmute');
+  await post('raiseCancel');
+  assert.strictEqual((await state()).raise.mode, 'cancelled');
+  await post('raiseHand');
+  await post('raiseStop');
+  assert.strictEqual((await state()).raise, null);
+  await server.close();
+});

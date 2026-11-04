@@ -134,6 +134,15 @@
   .adj { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin-top: var(--space-3); }
   .adj button { min-height: var(--tap-min); border-radius: var(--radius-sm); background: var(--surface); font-weight: var(--weight-bold); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
   .adj button:active { background: var(--line); }
+  .raiseRow { margin-top: var(--space-4); }
+  .raiseRow button { min-height: var(--tap-min); border-radius: var(--radius-sm); font-weight: var(--weight-bold); font-size: var(--text-sm); }
+  #raiseBtn { width: 100%; background: var(--surface); border: 1px solid var(--warn); color: var(--text); }
+  #raiseOn { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--warn); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  #raiseOn[hidden] { display: none; }
+  #raiseNote { text-align: center; font-size: var(--text-sm); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+  .raiseActions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+  .raiseActions button { background: var(--surface); }
+  .raiseActions button:active { background: var(--line); }
   .adjlabel { text-align: center; color: var(--text-dim); font-size: var(--text-xs); margin-top: var(--space-2); }
 
   .scenes { display: none; margin-top: auto; padding-top: var(--space-5); }
@@ -264,6 +273,18 @@
     </div>
     <div class="adjlabel">Adjust time for this part</div>
 
+    <div class="raiseRow">
+      <button id="raiseBtn">✋ ZOOM Raise Hand</button>
+      <div id="raiseOn" hidden>
+        <div id="raiseNote"></div>
+        <div class="raiseActions">
+          <button id="raiseCancel">Cancel</button>
+          <button id="raiseStop">Stop</button>
+          <button id="raiseUnmute">Tell conductor to unmute</button>
+        </div>
+      </div>
+    </div>
+
     <div class="scenes" id="scenes">
       <div class="srow"><label for="selScene">Scene for this part</label><select id="selScene"></select></div>
       <div class="srow" id="counselRow"><label for="selCounsel">Counseling scene</label><select id="selCounsel"></select></div>
@@ -387,6 +408,21 @@
     $('schedStatus').textContent = text;
     $('schedStatus').className = cls;
   }
+  $('raiseBtn').onclick = () => api('raiseHand');
+  $('raiseCancel').onclick = () => api('raiseCancel');
+  $('raiseStop').onclick = () => api('raiseStop');
+  $('raiseUnmute').onclick = () => api('raiseUnmute');
+  // While the raised hand is on the speaker's screen: Cancel, Stop and the unmute alert replace the button.
+  function renderRaise(nowMs) {
+    const r = state.raise;
+    const on = !!(r && r.mode !== 'cancelled' && nowMs < r.endsAt);
+    $('raiseBtn').hidden = on;
+    $('raiseOn').hidden = !on;
+    if (!on) return;
+    const left = Math.max(0, Math.ceil((r.endsAt - nowMs) / 1000));
+    $('raiseNote').textContent = (r.mode === 'unmute' ? 'Conductor asked to unmute' : 'Raise hand is on the speaker’s screen') + ' · ' + left + ' s';
+    $('raiseUnmute').disabled = r.mode === 'unmute';
+  }
   $('startAt').onchange = () => api('startAt', { time: $('startAt').value });
   $('startClear').onclick = () => api('startAt', { time: '' });
 
@@ -507,6 +543,7 @@
       alerter(v.state, state.currentId);
       const nowMs = Date.now() + conn.offset();
       renderSchedule(nowMs);
+      renderRaise(nowMs);
       const showNow = !!(state.clock && state.clock.show);
       $('now').hidden = !showNow;
       $('nowCard').hidden = !showNow;
