@@ -32,6 +32,7 @@ function paint(d) {
   for (const [id, t] of [['stMidweek', 'midweek'], ['stWeekend', 'weekend']]) if (document.activeElement !== $(id)) $(id).value = d.settings.startTimes[t];
   $('circuit').checked = d.settings.circuitVisit;
   $('showClock').checked = d.settings.showClock;
+  $('zoomRaise').checked = d.settings.zoomRaiseHand;
   document.querySelectorAll('#theme button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.theme));
   document.querySelectorAll('#clockFormat button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.clockFormat));
   $('clockDesc').textContent = d.settings.clockFormat === '24h' ? 'For example 19:30' : 'For example 7:30 PM';
@@ -195,6 +196,7 @@ document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => save
 document.querySelectorAll('#adaptive button').forEach((b) => (b.onclick = () => save({ adaptiveMode: b.dataset.v })));
 for (const [id, t] of [['stMidweek', 'midweek'], ['stWeekend', 'weekend']]) $(id).onchange = () => save({ startTimes: { [t]: $(id).value } });
 $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
+$('zoomRaise').onchange = (e) => save({ zoomRaiseHand: e.target.checked });
 $('showClock').onchange = (e) => save({ showClock: e.target.checked });
 document.querySelectorAll('#clockFormat button').forEach((b) => (b.onclick = () => save({ clockFormat: b.dataset.v })));
 document.querySelectorAll('#theme button').forEach((b) => (b.onclick = () => save({ theme: b.dataset.v })));

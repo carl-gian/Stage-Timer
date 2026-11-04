@@ -1,6 +1,15 @@
-# Stage Timer 1.2.4
+# Stage Timer 1.3.0
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.3.0
+
+- **ZOOM Raise Hand.** When someone raises their hand on Zoom, press **✋ ZOOM Raise Hand** on the control page. The speaker's screen shows a big "✋ ZOOM Raise Hand" with an amber border that glows in and out. It goes away by itself after 45 seconds, and the timer keeps running underneath.
+  - **Cancel:** the screen shows "Zoom raise hand cancelled" for 5 seconds, then returns to the timer.
+  - **Stop:** goes straight back to the timer.
+  - **Tell conductor to unmute:** adds "Conductor: ask them to unmute" to the screen, without restarting the 45 seconds.
+  - **Optional:** turn it off under *Meeting → Zoom raise hand*. The button then disappears from the control page.
+- **Bigger text on the speaker's screen, made for a 1080p monitor.** The countdown, the time of day, the part name and the progress bar are larger. A one-hour countdown (1:00:00) still fits with room to spare.
 
 ## What's new in 1.2.4
 
@@ -73,7 +82,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.2.4.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.3.0.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

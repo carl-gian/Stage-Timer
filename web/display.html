@@ -21,19 +21,19 @@
   /* Nothing may push the page wider than the screen, or flex centring shifts everything sideways
      (shows up at phone width, where the section label is wider than the viewport). */
   body > * { max-width: 100%; }
-  .section { font-size: max(2.6vmin, 11px); color: var(--brand); text-transform: uppercase; letter-spacing: .16em; font-weight: var(--weight-bold); text-align: center; padding: 0 4vw; }
-  .name { font-size: 5vmin; color: var(--text-dim); font-weight: var(--weight-medium); text-align: center; padding: 0 4vw; }
+  .section { font-size: max(3.4vmin, 11px); color: var(--brand); text-transform: uppercase; letter-spacing: .16em; font-weight: var(--weight-bold); text-align: center; padding: 0 4vw; }
+  .name { font-size: 6.4vmin; color: var(--text-dim); font-weight: var(--weight-medium); text-align: center; padding: 0 4vw; }
   /* Big and bright: the speaker reads this from the platform, often past the lectern lights.
      vmin keeps it inside the shorter side; min() stops it overflowing a very wide screen. */
   .time {
-    font-size: min(38vmin, 26vw); font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em;
+    font-size: min(46vmin, 26vw); font-weight: var(--weight-black); line-height: 1; letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums; transition: color .2s; color: var(--text);
   }
-  .bar { width: 70vw; flex: none; height: max(1.6vmin, 6px); background: var(--surface); border-radius: 99px; overflow: hidden; }
+  .bar { width: 70vw; flex: none; height: max(2vmin, 6px); background: var(--surface); border-radius: 99px; overflow: hidden; }
   .bar > i { display: block; height: 100%; width: 0; background: var(--brand); transition: background .2s; }
 
   /* Current time between parts (Settings → Clock) */
-  .time small { font-size: 9vmin; color: var(--text-dim); margin-left: 1.5vmin; font-weight: var(--weight-bold); letter-spacing: 0; }
+  .time small { font-size: 11vmin; color: var(--text-dim); margin-left: 1.5vmin; font-weight: var(--weight-bold); letter-spacing: 0; }
   .up { font-size: 4.2vmin; color: var(--text-dim); text-align: center; padding: 0 4vw; display: none; }
   .up b { color: var(--text); font-weight: var(--weight-bold); }
   body.now .time { color: var(--text); font-weight: var(--weight-bold); }
@@ -70,14 +70,14 @@
   .raise.show { display: flex; }
   .raise::after {
     content: ""; position: absolute; inset: 0; pointer-events: none;
-    border: 2.4vmin solid var(--warn-bright, var(--warn));
+    border: 3vmin solid var(--warn-bright, var(--warn));
     box-shadow: inset 0 0 8vmin color-mix(in srgb, var(--warn) 85%, transparent), 0 0 6vmin color-mix(in srgb, var(--warn) 80%, transparent);
     animation: raiseGlow 1.8s ease-in-out infinite;
   }
   .raise[data-mode="cancelled"]::after { display: none; }
-  .raise .big { font-size: min(13vmin, 8.5vw); font-weight: var(--weight-black); line-height: 1.05; color: var(--warn-bright, var(--warn)); letter-spacing: -0.02em; }
-  .raise .sub { font-size: min(6vmin, 5vw); font-weight: var(--weight-bold); color: var(--text); }
-  .raise[data-mode="cancelled"] .big { color: var(--text-dim); font-size: min(10vmin, 7vw); }
+  .raise .big { font-size: min(15vmin, 8.5vw); font-weight: var(--weight-black); line-height: 1.05; color: var(--warn-bright, var(--warn)); letter-spacing: -0.02em; }
+  .raise .sub { font-size: min(7.5vmin, 5vw); font-weight: var(--weight-bold); color: var(--text); }
+  .raise[data-mode="cancelled"] .big { color: var(--text-dim); font-size: min(12vmin, 6.5vw); }
   @keyframes raiseGlow { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
 
   /* Pop-up message */

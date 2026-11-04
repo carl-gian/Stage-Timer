@@ -387,3 +387,19 @@ test('zoom raise hand: the controller commands work over the API', async () => {
   assert.strictEqual((await state()).raise, null);
   await server.close();
 });
+
+test('zoom raise hand: can be turned off, and turning it off clears one that is showing', async () => {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  assert.strictEqual(service.settings.zoomRaiseHand, true); // on by default
+  assert.strictEqual(service.snapshot().raiseEnabled, true);
+  service.raiseHand();
+  await service.updateSettings({ zoomRaiseHand: false });
+  assert.strictEqual(service.raise, null);
+  assert.strictEqual(service.snapshot().raiseEnabled, false);
+  service.raiseHand(); // the button is gone, and the command does nothing
+  assert.strictEqual(service.raise, null);
+  await service.updateSettings({ zoomRaiseHand: true });
+  service.raiseHand();
+  assert.strictEqual(service.raise.mode, 'hand');
+  service.raiseStop();
+});

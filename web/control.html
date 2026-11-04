@@ -135,6 +135,7 @@
   .adj button { min-height: var(--tap-min); border-radius: var(--radius-sm); background: var(--surface); font-weight: var(--weight-bold); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
   .adj button:active { background: var(--line); }
   .raiseRow { margin-top: var(--space-4); }
+  .raiseRow[hidden] { display: none; }
   .raiseRow button { min-height: var(--tap-min); border-radius: var(--radius-sm); font-weight: var(--weight-bold); font-size: var(--text-sm); }
   #raiseBtn { width: 100%; background: var(--surface); border: 1px solid var(--warn); color: var(--text); }
   #raiseOn { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--warn); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--warn) 12%, transparent); }
@@ -273,7 +274,7 @@
     </div>
     <div class="adjlabel">Adjust time for this part</div>
 
-    <div class="raiseRow">
+    <div class="raiseRow" id="raiseRow">
       <button id="raiseBtn">✋ ZOOM Raise Hand</button>
       <div id="raiseOn" hidden>
         <div id="raiseNote"></div>
@@ -415,6 +416,7 @@
   // While the raised hand is on the speaker's screen: Cancel, Stop and the unmute alert replace the button.
   function renderRaise(nowMs) {
     const r = state.raise;
+    $('raiseRow').hidden = state.raiseEnabled === false;
     const on = !!(r && r.mode !== 'cancelled' && nowMs < r.endsAt);
     $('raiseBtn').hidden = on;
     $('raiseOn').hidden = !on;

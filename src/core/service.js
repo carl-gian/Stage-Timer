@@ -52,6 +52,7 @@ class StageService extends EventEmitter {
       obsCounselScenes: {}, // per-part counseling scene, same shape as obsScenes
       obsCounselScene: '', // scene after a ministry student talk is stopped (counsel is given); empty = use the default
       obsDefaultScene: '', // scene to show when a part is stopped (empty = leave OBS alone)
+      zoomRaiseHand: true, // the "ZOOM Raise Hand" button and screen; can be turned off
       showClock: false, // current time on the control page, and on the display between parts
       clockFormat: '12h', // 12h | 24h
       theme: 'auto', // auto (follow Windows) | light | dark: control page and settings window
@@ -93,7 +94,7 @@ class StageService extends EventEmitter {
       counsel: this.settings.obsCounselScenes[mt] || {},
     };
     const clock = { show: this.settings.showClock, format: this.settings.clockFormat };
-    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, clock, theme: this.settings.theme };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, raiseEnabled: this.settings.zoomRaiseHand, clock, theme: this.settings.theme };
   }
 
   _setRaise(mode, secs) {
@@ -109,6 +110,7 @@ class StageService extends EventEmitter {
 
   /** Shows "Zoom raise hand" on the speaker's screen; it goes away by itself after 45 seconds. */
   raiseHand() {
+    if (!this.settings.zoomRaiseHand) return;
     this._setRaise('hand', RAISE_SECS);
   }
 
@@ -359,7 +361,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen', 'startTimes'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen', 'startTimes', 'zoomRaiseHand'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
     if (patch.startTimes && typeof patch.startTimes === 'object') this.settings.startTimes = { ...before.startTimes, ...patch.startTimes };
@@ -376,6 +378,8 @@ class StageService extends EventEmitter {
     this.settings.startHidden = this.settings.startHidden !== false;
     this.settings.displayScreen = /^\d{1,12}$/.test(String(this.settings.displayScreen ?? '')) ? String(this.settings.displayScreen) : '';
     this.settings.obsEnabled = this.settings.obsEnabled === true;
+    this.settings.zoomRaiseHand = this.settings.zoomRaiseHand !== false;
+    if (!this.settings.zoomRaiseHand) this.raiseStop(); // turned off while showing: back to the timer
     this.settings.showClock = this.settings.showClock === true;
     if (!['12h', '24h'].includes(this.settings.clockFormat)) this.settings.clockFormat = before.clockFormat;
     if (!['auto', 'light', 'dark'].includes(this.settings.theme)) this.settings.theme = before.theme;
