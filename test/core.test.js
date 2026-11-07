@@ -470,12 +470,3 @@ test('zoom raise hand: the countdown is held while the operator types, and never
   service.raiseTyping(true); // nothing to hold on the cancelled screen
   assert.strictEqual(service.raise.paused, undefined);
 });
-
-test('zoom raise hand: the look is a banner by default, and can be full screen', async () => {
-  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
-  assert.strictEqual(service.snapshot().raiseStyle, 'banner');
-  await service.updateSettings({ raiseStyle: 'full' });
-  assert.strictEqual(service.snapshot().raiseStyle, 'full');
-  await service.updateSettings({ raiseStyle: 'neon' }); // junk is ignored
-  assert.strictEqual(service.snapshot().raiseStyle, 'full');
-});

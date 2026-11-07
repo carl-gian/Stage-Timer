@@ -33,8 +33,6 @@ function paint(d) {
   $('circuit').checked = d.settings.circuitVisit;
   $('showClock').checked = d.settings.showClock;
   $('zoomRaise').checked = d.settings.zoomRaiseHand;
-  document.querySelectorAll('#raiseStyle button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.raiseStyle));
-  $('raiseStyleDesc').textContent = d.settings.raiseStyle === 'full' ? 'Takes the whole screen, with a glowing amber border' : 'A blue bar across the top. The timer stays visible below it';
   document.querySelectorAll('#theme button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.theme));
   document.querySelectorAll('#clockFormat button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.settings.clockFormat));
   $('clockDesc').textContent = d.settings.clockFormat === '24h' ? 'For example 19:30' : 'For example 7:30 PM';
@@ -198,7 +196,6 @@ document.querySelectorAll('#mode button').forEach((b) => (b.onclick = () => save
 document.querySelectorAll('#adaptive button').forEach((b) => (b.onclick = () => save({ adaptiveMode: b.dataset.v })));
 for (const [id, t] of [['stMidweek', 'midweek'], ['stWeekend', 'weekend']]) $(id).onchange = () => save({ startTimes: { [t]: $(id).value } });
 $('circuit').onchange = (e) => save({ circuitVisit: e.target.checked });
-document.querySelectorAll('#raiseStyle button').forEach((b) => (b.onclick = () => save({ raiseStyle: b.dataset.v })));
 $('zoomRaise').onchange = (e) => save({ zoomRaiseHand: e.target.checked });
 $('showClock').onchange = (e) => save({ showClock: e.target.checked });
 document.querySelectorAll('#clockFormat button').forEach((b) => (b.onclick = () => save({ clockFormat: b.dataset.v })));
