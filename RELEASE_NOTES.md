@@ -1,6 +1,13 @@
-# Stage Timer 1.3.2
+# Stage Timer 1.3.3
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.3.3
+
+- **ZOOM Raise Hand is bigger.** Before a name is sent, "✋ ZOOM Raise Hand" fills the screen on two lines, more than 40% larger than before.
+- **A small timer stays on top.** While the raise hand is showing, a strip along the top of the screen keeps the meeting timer in view, in words and in real time: for example "Watchtower Study — 15 minutes, 30 seconds left". It turns amber and red with the usual warnings, and says "over" after the time is up.
+- **A countdown ring for the raise hand.** A ring in the bottom-right corner counts down the raise hand's own seconds (45, or 90 after a name is sent). In the last 10 seconds it pulses gently.
+- **The countdown waits while you type.** While you type a name, the raise hand's countdown is held, and the ring turns dashed, so the screen can't disappear in the middle of a name. It carries on when you stop typing or press Send. If the control page stops responding, it resumes after 5 seconds, and one raise hand is never held for more than 3 minutes.
 
 ## What's new in 1.3.2
 
@@ -91,7 +98,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.3.2.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.3.3.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 
