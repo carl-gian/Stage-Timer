@@ -13,6 +13,7 @@ const { buildReport, ReportStore, REPORT_AFTER } = require('./report');
 
 const MEETING_TYPES = ['midweek', 'weekend'];
 const RAISE_SECS = 45; // how long a Zoom raised hand stays on the speaker's screen
+const NAMED_SECS = 90; // after a name is sent, the raised hand stays for a minute and a half
 const CANCELLED_SECS = 5; // how long "cancelled" stays after Cancel
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24-hour HH:MM, as saved
 
@@ -125,13 +126,13 @@ class StageService extends EventEmitter {
     this.emit('raise');
   }
 
-  /** Shows who is raising their hand, big on the speaker's screen, and starts the 45 seconds again. */
+  /** Shows who is raising their hand, big on the speaker's screen. It then stays for 90 seconds from now. */
   raiseName(name) {
     if (!this.raise || this.raise.mode === 'cancelled') return false;
     const who = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
     if (!who) return false;
     const mode = this.raise.mode;
-    this._setRaise(mode, RAISE_SECS);
+    this._setRaise(mode, NAMED_SECS);
     this.raise = { ...this.raise, name: who };
     return true;
   }

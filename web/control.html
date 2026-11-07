@@ -143,6 +143,9 @@
   #raiseNote { text-align: center; font-size: var(--text-sm); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
   .raiseActions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
   .raiseActions button { background: var(--surface); }
+  .raiseSent { text-align: center; font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--ok-text); background: color-mix(in srgb, var(--ok) 16%, transparent); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+  .raiseSent[hidden] { display: none; }
+  .raiseSent.bad { color: var(--danger-text); background: color-mix(in srgb, var(--danger) 16%, transparent); }
   .raiseName { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); }
   .raiseName input { min-height: var(--tap-min); min-width: 0; font: inherit; font-size: var(--text-sm); color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
   .raiseName button { background: var(--warn); color: #1b1200; padding: 0 var(--space-5); }
@@ -286,6 +289,7 @@
           <button id="raiseStop">Stop</button>
           <button id="raiseUnmute">Tell conductor to unmute</button>
         </div>
+        <div class="raiseSent" id="raiseSent" role="status" hidden></div>
         <form class="raiseName" id="raiseForm">
           <input id="raiseWho" type="text" maxlength="60" autocomplete="off" placeholder="Name of the person raising their hand" aria-label="Name of the person raising their hand">
           <button type="submit" id="raiseSend">Send</button>
@@ -421,12 +425,30 @@
   $('raiseStop').onclick = () => api('raiseStop');
   $('raiseUnmute').onclick = () => api('raiseUnmute');
   // While the raised hand is on the speaker's screen: Cancel, Stop and the unmute alert replace the button.
-  $('raiseForm').onsubmit = (e) => {
+  let sentTimer = null;
+  function sentNote(text, bad) {
+    $('raiseSent').textContent = text;
+    $('raiseSent').classList.toggle('bad', !!bad);
+    $('raiseSent').hidden = false;
+    clearTimeout(sentTimer);
+    sentTimer = setTimeout(() => ($('raiseSent').hidden = true), 4000);
+  }
+  // Send puts the name on the speaker's screen and says so here, so the operator knows it went out.
+  $('raiseForm').onsubmit = async (e) => {
     e.preventDefault();
     const name = $('raiseWho').value.trim();
     if (!name) return;
-    api('raiseName', { name });
-    $('raiseWho').value = '';
+    $('raiseSend').disabled = true;
+    try {
+      const s = await api('raiseName', { name });
+      if (!s) return; // the PIN prompt is showing
+      if (s.raise && s.raise.name) { $('raiseWho').value = ''; sentNote('✓ Sent: ' + s.raise.name + ' is on the speaker’s screen'); }
+      else sentNote('Not sent: the raise hand is no longer showing', true);
+    } catch {
+      sentNote('Not sent: could not reach the timer', true);
+    } finally {
+      $('raiseSend').disabled = false;
+    }
   };
   let raiseWasOn = false;
   function renderRaise(nowMs) {
@@ -437,7 +459,7 @@
     $('raiseOn').hidden = !on;
     if (on && !raiseWasOn) setTimeout(() => $('raiseWho').focus(), 0); // ready to type the name
     raiseWasOn = on;
-    if (!on) { $('raiseWho').value = ''; return; }
+    if (!on) { $('raiseWho').value = ''; $('raiseSent').hidden = true; return; }
     const left = Math.max(0, Math.ceil((r.endsAt - nowMs) / 1000));
     $('raiseNote').textContent = (r.mode === 'unmute' ? 'Conductor asked to unmute' : 'Raise hand is on the speaker’s screen') + (r.name ? ' · ' + r.name : '') + ' · ' + left + ' s';
     $('raiseUnmute').disabled = r.mode === 'unmute';

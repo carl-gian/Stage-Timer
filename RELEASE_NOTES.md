@@ -1,6 +1,11 @@
-# Stage Timer 1.3.1
+# Stage Timer 1.3.2
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.3.2
+
+- **A confirmation when the name is sent.** After you press **Send**, a green "✓ Sent: Maria is on the speaker's screen" appears under the buttons for a few seconds, and the name also shows in the panel's status line. If the raise hand has already ended, it says "Not sent" in red instead, and your typing is kept.
+- **The raise hand now stays for 1½ minutes after the name is sent.** It no longer adds 45 seconds. Sending a name sets it to 90 seconds from that moment. Without a name, it still goes away after 45 seconds.
 
 ## What's new in 1.3.1
 
@@ -86,7 +91,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.3.1.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.3.2.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 
