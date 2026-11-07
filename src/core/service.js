@@ -119,10 +119,21 @@ class StageService extends EventEmitter {
     if (!this.raise || this.raise.mode === 'cancelled') return;
     clearTimeout(this._raiseTimer);
     const secs = Math.max(0, (this.raise.endsAt - Date.now()) / 1000);
-    this.raise = { mode: 'unmute', endsAt: this.raise.endsAt };
+    this.raise = { ...this.raise, mode: 'unmute' };
     this._raiseTimer = setTimeout(() => this._setRaise(null), secs * 1000);
     this._raiseTimer.unref();
     this.emit('raise');
+  }
+
+  /** Shows who is raising their hand, big on the speaker's screen, and starts the 45 seconds again. */
+  raiseName(name) {
+    if (!this.raise || this.raise.mode === 'cancelled') return false;
+    const who = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!who) return false;
+    const mode = this.raise.mode;
+    this._setRaise(mode, RAISE_SECS);
+    this.raise = { ...this.raise, name: who };
+    return true;
   }
 
   /** "Zoom raise hand cancelled" for 5 seconds, then back to the timer. */

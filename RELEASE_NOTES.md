@@ -1,6 +1,10 @@
-# Stage Timer 1.3.0
+# Stage Timer 1.3.1
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.3.1
+
+- **Show who is raising their hand.** After pressing **✋ ZOOM Raise Hand**, a box appears at the bottom of the panel to type the person's name. Press **Send** (or Enter) and the speaker's screen shows the name very large, bigger than the "ZOOM Raise Hand" heading, and the 45 seconds start again. Long names shrink to fit across the screen. The name stays on the screen if you press *Tell conductor to unmute*.
 
 ## What's new in 1.3.0
 
@@ -82,7 +86,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.3.0.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.3.1.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

@@ -143,6 +143,9 @@
   #raiseNote { text-align: center; font-size: var(--text-sm); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
   .raiseActions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
   .raiseActions button { background: var(--surface); }
+  .raiseName { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); }
+  .raiseName input { min-height: var(--tap-min); min-width: 0; font: inherit; font-size: var(--text-sm); color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 var(--space-3); }
+  .raiseName button { background: var(--warn); color: #1b1200; padding: 0 var(--space-5); }
   .raiseActions button:active { background: var(--line); }
   .adjlabel { text-align: center; color: var(--text-dim); font-size: var(--text-xs); margin-top: var(--space-2); }
 
@@ -283,6 +286,10 @@
           <button id="raiseStop">Stop</button>
           <button id="raiseUnmute">Tell conductor to unmute</button>
         </div>
+        <form class="raiseName" id="raiseForm">
+          <input id="raiseWho" type="text" maxlength="60" autocomplete="off" placeholder="Name of the person raising their hand" aria-label="Name of the person raising their hand">
+          <button type="submit" id="raiseSend">Send</button>
+        </form>
       </div>
     </div>
 
@@ -414,15 +421,25 @@
   $('raiseStop').onclick = () => api('raiseStop');
   $('raiseUnmute').onclick = () => api('raiseUnmute');
   // While the raised hand is on the speaker's screen: Cancel, Stop and the unmute alert replace the button.
+  $('raiseForm').onsubmit = (e) => {
+    e.preventDefault();
+    const name = $('raiseWho').value.trim();
+    if (!name) return;
+    api('raiseName', { name });
+    $('raiseWho').value = '';
+  };
+  let raiseWasOn = false;
   function renderRaise(nowMs) {
     const r = state.raise;
     $('raiseRow').hidden = state.raiseEnabled === false;
     const on = !!(r && r.mode !== 'cancelled' && nowMs < r.endsAt);
     $('raiseBtn').hidden = on;
     $('raiseOn').hidden = !on;
-    if (!on) return;
+    if (on && !raiseWasOn) setTimeout(() => $('raiseWho').focus(), 0); // ready to type the name
+    raiseWasOn = on;
+    if (!on) { $('raiseWho').value = ''; return; }
     const left = Math.max(0, Math.ceil((r.endsAt - nowMs) / 1000));
-    $('raiseNote').textContent = (r.mode === 'unmute' ? 'Conductor asked to unmute' : 'Raise hand is on the speaker’s screen') + ' · ' + left + ' s';
+    $('raiseNote').textContent = (r.mode === 'unmute' ? 'Conductor asked to unmute' : 'Raise hand is on the speaker’s screen') + (r.name ? ' · ' + r.name : '') + ' · ' + left + ' s';
     $('raiseUnmute').disabled = r.mode === 'unmute';
   }
   $('startAt').onchange = () => api('startAt', { time: $('startAt').value });

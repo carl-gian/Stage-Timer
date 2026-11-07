@@ -103,6 +103,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     report: () => service.makeReport(),
     raiseHand: () => service.raiseHand(),
     raiseUnmute: () => service.raiseUnmute(),
+    raiseName: (b) => service.raiseName(b.name),
     raiseCancel: () => service.raiseCancel(),
     raiseStop: () => service.raiseStop(),
     startAt: (b) => service.setStartOverride(b.time),

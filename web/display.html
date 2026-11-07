@@ -76,6 +76,9 @@
   }
   .raise[data-mode="cancelled"]::after { display: none; }
   .raise .big { font-size: min(15vmin, 8.5vw); font-weight: var(--weight-black); line-height: 1.05; color: var(--warn-bright, var(--warn)); letter-spacing: -0.02em; }
+  /* The name is the biggest thing on the screen: bigger than the heading. JS lowers the size for long names. */
+  .raise .who { font-size: min(20vmin, 11vw); font-weight: var(--weight-black); line-height: 1.05; color: var(--text); letter-spacing: -0.02em; max-width: 92vw; overflow-wrap: anywhere; }
+  .raise .who:empty { display: none; }
   .raise .sub { font-size: min(7.5vmin, 5vw); font-weight: var(--weight-bold); color: var(--text); }
   .raise[data-mode="cancelled"] .big { color: var(--text-dim); font-size: min(12vmin, 6.5vw); }
   @keyframes raiseGlow { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
@@ -109,7 +112,7 @@
   <div class="time" id="time">0:00</div>
   <div class="bar" id="bar"><i id="fill"></i></div>
   <div class="up" id="up">Up next: <b id="upName"></b><span id="upDur"></span></div>
-  <div class="raise" id="raise"><div class="big" id="raiseBig"></div><div class="sub" id="raiseSub"></div></div>
+  <div class="raise" id="raise"><div class="big" id="raiseBig"></div><div class="who" id="raiseWho"></div><div class="sub" id="raiseSub"></div></div>
   <div class="popup" id="popup"></div>
   <div class="offline">● reconnecting…</div>
 <script src="/client.js"></script>
@@ -133,11 +136,17 @@
   function drawRaise() {
     const r = last.raise;
     const mode = r && Date.now() + conn.offset() < r.endsAt + 1000 ? r.mode : ''; // a stale message never lingers
-    if (mode === raiseMode) return;
-    raiseMode = mode;
+    const who = mode === 'hand' || mode === 'unmute' ? (r.name || '') : '';
+    if (mode + '|' + who === raiseMode) return;
+    raiseMode = mode + '|' + who;
     $('raise').classList.toggle('show', !!mode);
     $('raise').dataset.mode = mode;
     if (mode) { $('raiseBig').textContent = RAISE[mode][0]; $('raiseSub').textContent = RAISE[mode][1]; }
+    $('raiseWho').textContent = who;
+    // Short names get the full size; a long one shrinks (and may take two lines) so it still fits across the screen.
+    const lines = who.length <= 14 ? 1 : 2;
+    const em = Math.max(4, lines === 1 ? who.length : Math.ceil(who.length / 2) + 1) * 0.6;
+    $('raiseWho').style.fontSize = 'min(20vmin, ' + (88 / em).toFixed(2) + 'vw)';
   }
 
   function draw() {

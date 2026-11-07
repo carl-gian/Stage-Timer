@@ -403,3 +403,28 @@ test('zoom raise hand: can be turned off, and turning it off clears one that is 
   assert.strictEqual(service.raise.mode, 'hand');
   service.raiseStop();
 });
+
+test('zoom raise hand: the name of the person is shown and starts the 45 seconds again', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  assert.strictEqual(service.raiseName('Maria'), false); // nothing showing: nowhere to put a name
+  service.raiseHand();
+  t.mock.timers.tick(30000);
+  assert.strictEqual(service.raiseName('  Maria   Santos  '), true);
+  assert.deepStrictEqual([service.raise.mode, service.raise.name], ['hand', 'Maria Santos']);
+  assert.strictEqual(service.raise.endsAt - Date.now(), 45000); // a full 45 seconds again
+  t.mock.timers.tick(44999);
+  assert.strictEqual(service.raise.name, 'Maria Santos');
+  service.raiseUnmute(); // the name stays on the alert
+  assert.deepStrictEqual([service.raise.mode, service.raise.name], ['unmute', 'Maria Santos']);
+  assert.strictEqual(service.raiseName('   '), false); // an empty name changes nothing
+  assert.strictEqual(service.raiseName('x'.repeat(100)), true);
+  assert.strictEqual(service.raise.name.length, 60);
+  t.mock.timers.tick(45000);
+  assert.strictEqual(service.raise, null);
+  service.raiseHand();
+  service.raiseName('Jose');
+  service.raiseCancel(); // "cancelled" has no name, and a name can't be added to it
+  assert.strictEqual(service.raise.name, undefined);
+  assert.strictEqual(service.raiseName('Jose'), false);
+});
