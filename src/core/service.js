@@ -15,6 +15,8 @@ const MEETING_TYPES = ['midweek', 'weekend'];
 const RAISE_SECS = 45; // how long a Zoom raised hand stays on the speaker's screen
 const NAMED_SECS = 90; // after a name is sent, the raised hand stays for a minute and a half
 const CANCELLED_SECS = 5; // how long "cancelled" stays after Cancel
+const TYPING_GRACE_MS = 5000; // typing is assumed to have stopped when no signal has come for this long
+const MAX_HOLD_MS = 3 * 60 * 1000; // the most one raise hand can be held while typing
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24-hour HH:MM, as saved
 
 const randomPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
@@ -53,6 +55,7 @@ class StageService extends EventEmitter {
       obsCounselScenes: {}, // per-part counseling scene, same shape as obsScenes
       obsCounselScene: '', // scene after a ministry student talk is stopped (counsel is given); empty = use the default
       obsDefaultScene: '', // scene to show when a part is stopped (empty = leave OBS alone)
+      raiseStyle: 'banner', // banner (across the top, the timer stays visible) | full (takes the whole screen)
       zoomRaiseHand: true, // the "ZOOM Raise Hand" button and screen; can be turned off
       showClock: false, // current time on the control page, and on the display between parts
       clockFormat: '12h', // 12h | 24h
@@ -95,18 +98,23 @@ class StageService extends EventEmitter {
       counsel: this.settings.obsCounselScenes[mt] || {},
     };
     const clock = { show: this.settings.showClock, format: this.settings.clockFormat };
-    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, raiseEnabled: this.settings.zoomRaiseHand, clock, theme: this.settings.theme };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, raiseEnabled: this.settings.zoomRaiseHand, raiseStyle: this.settings.raiseStyle, clock, theme: this.settings.theme };
   }
 
   _setRaise(mode, secs) {
     clearTimeout(this._raiseTimer);
-    this._raiseTimer = null;
-    this.raise = mode ? { mode, endsAt: Date.now() + secs * 1000 } : null;
-    if (mode) {
-      this._raiseTimer = setTimeout(() => this._setRaise(null), secs * 1000);
-      this._raiseTimer.unref();
-    }
+    clearTimeout(this._typingTimer);
+    this._raiseTimer = this._typingTimer = null;
+    this._heldMs = 0; // how long this raise hand has been held for typing
+    this.raise = mode ? { mode, endsAt: Date.now() + secs * 1000, totalSecs: secs } : null;
+    if (mode) this._armRaise(secs * 1000);
     this.emit('raise');
+  }
+
+  _armRaise(ms) {
+    clearTimeout(this._raiseTimer);
+    this._raiseTimer = setTimeout(() => this._setRaise(null), ms);
+    this._raiseTimer.unref();
   }
 
   /** Shows "Zoom raise hand" on the speaker's screen; it goes away by itself after 45 seconds. */
@@ -115,14 +123,10 @@ class StageService extends EventEmitter {
     this._setRaise('hand', RAISE_SECS);
   }
 
-  /** Asks the conductor to tell the person to unmute. Keeps the same 45 seconds. */
+  /** Asks the conductor to tell the person to unmute. Keeps the time that is left. */
   raiseUnmute() {
     if (!this.raise || this.raise.mode === 'cancelled') return;
-    clearTimeout(this._raiseTimer);
-    const secs = Math.max(0, (this.raise.endsAt - Date.now()) / 1000);
     this.raise = { ...this.raise, mode: 'unmute' };
-    this._raiseTimer = setTimeout(() => this._setRaise(null), secs * 1000);
-    this._raiseTimer.unref();
     this.emit('raise');
   }
 
@@ -135,6 +139,36 @@ class StageService extends EventEmitter {
     this._setRaise(mode, NAMED_SECS);
     this.raise = { ...this.raise, name: who };
     return true;
+  }
+
+  /**
+   * The operator is typing a name: hold the raise hand's countdown so the screen cannot vanish mid-name.
+   * The control page repeats this every couple of seconds; if it stops (phone locked, Wi-Fi gone) the countdown
+   * carries on, and one raise hand is never held for longer than 3 minutes in total.
+   */
+  raiseTyping(on) {
+    const r = this.raise;
+    if (!r || r.mode === 'cancelled') return;
+    if (on) {
+      clearTimeout(this._typingTimer);
+      if (!r.paused) {
+        if (this._heldMs >= MAX_HOLD_MS) return;
+        clearTimeout(this._raiseTimer);
+        this.raise = { ...r, paused: true, remainingMs: Math.max(0, r.endsAt - Date.now()) };
+        this._pausedAt = Date.now();
+        this.emit('raise');
+      }
+      const budget = MAX_HOLD_MS - this._heldMs - (Date.now() - this._pausedAt);
+      this._typingTimer = setTimeout(() => this.raiseTyping(false), Math.max(0, Math.min(TYPING_GRACE_MS, budget)));
+      this._typingTimer.unref();
+    } else if (r.paused) {
+      clearTimeout(this._typingTimer);
+      this._heldMs += Date.now() - this._pausedAt;
+      const { paused, remainingMs, ...rest } = r;
+      this.raise = { ...rest, endsAt: Date.now() + remainingMs };
+      this._armRaise(remainingMs);
+      this.emit('raise');
+    }
   }
 
   /** "Zoom raise hand cancelled" for 5 seconds, then back to the timer. */
@@ -373,7 +407,7 @@ class StageService extends EventEmitter {
   }
 
   async updateSettings(patch) {
-    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen', 'startTimes', 'zoomRaiseHand'];
+    const allowed = ['port', 'pin', 'localNoPin', 'meetingMode', 'circuitVisit', 'closingSecs', 'feedUrl', 'adaptiveMode', 'hostname', 'obsEnabled', 'obsUrl', 'obsPassword', 'obsSettleMs', 'obsDefaultScene', 'obsCounselScene', 'autoUpdate', 'startHidden', 'showClock', 'clockFormat', 'theme', 'displayScreen', 'startTimes', 'zoomRaiseHand', 'raiseStyle'];
     const before = { ...this.settings };
     for (const k of allowed) if (k in patch) this.settings[k] = patch[k];
     if (patch.startTimes && typeof patch.startTimes === 'object') this.settings.startTimes = { ...before.startTimes, ...patch.startTimes };
@@ -390,6 +424,7 @@ class StageService extends EventEmitter {
     this.settings.startHidden = this.settings.startHidden !== false;
     this.settings.displayScreen = /^\d{1,12}$/.test(String(this.settings.displayScreen ?? '')) ? String(this.settings.displayScreen) : '';
     this.settings.obsEnabled = this.settings.obsEnabled === true;
+    if (!['banner', 'full'].includes(this.settings.raiseStyle)) this.settings.raiseStyle = before.raiseStyle;
     this.settings.zoomRaiseHand = this.settings.zoomRaiseHand !== false;
     if (!this.settings.zoomRaiseHand) this.raiseStop(); // turned off while showing: back to the timer
     this.settings.showClock = this.settings.showClock === true;

@@ -428,3 +428,54 @@ test('zoom raise hand: the name of the person is shown, and it then stays for 90
   assert.strictEqual(service.raise.name, undefined);
   assert.strictEqual(service.raiseName('Jose'), false);
 });
+
+test('zoom raise hand: the countdown is held while the operator types, and never for ever', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  service.raiseHand(); // 45 s
+  t.mock.timers.tick(30000);
+  service.raiseTyping(true);
+  assert.deepStrictEqual([service.raise.paused, service.raise.remainingMs, service.raise.totalSecs], [true, 15000, 45]);
+  for (let i = 0; i < 5; i++) { t.mock.timers.tick(2000); service.raiseTyping(true); } // the control page repeats it
+  assert.ok(service.raise, 'still showing long after the 45 seconds would have run out');
+  assert.strictEqual(service.raise.remainingMs, 15000); // nothing was used up while typing
+
+  service.raiseTyping(false); // typing stopped: the rest of the time runs
+  assert.strictEqual(service.raise.paused, undefined);
+  assert.strictEqual(service.raise.endsAt - Date.now(), 15000);
+  t.mock.timers.tick(14999);
+  assert.ok(service.raise);
+  t.mock.timers.tick(1);
+  assert.strictEqual(service.raise, null);
+
+  service.raiseHand(); // the signal stops (phone locked): the countdown carries on by itself
+  service.raiseTyping(true);
+  t.mock.timers.tick(5000);
+  assert.strictEqual(service.raise.paused, undefined);
+
+  service.raiseStop();
+  service.raiseHand(); // never held more than 3 minutes in all
+  service.raiseTyping(true);
+  for (let i = 0; i < 100 && service.raise.paused; i++) { t.mock.timers.tick(2000); service.raiseTyping(true); }
+  assert.strictEqual(service.raise.paused, undefined);
+  service.raiseTyping(true); // used up: it is not held again
+  assert.strictEqual(service.raise.paused, undefined);
+
+  service.raiseStop(); // sending a name ends the hold and starts the 90 seconds
+  service.raiseHand();
+  service.raiseTyping(true);
+  assert.strictEqual(service.raiseName('Maria'), true);
+  assert.deepStrictEqual([service.raise.paused, service.raise.endsAt - Date.now(), service.raise.totalSecs], [undefined, 90000, 90]);
+  service.raiseCancel();
+  service.raiseTyping(true); // nothing to hold on the cancelled screen
+  assert.strictEqual(service.raise.paused, undefined);
+});
+
+test('zoom raise hand: the look is a banner by default, and can be full screen', async () => {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  assert.strictEqual(service.snapshot().raiseStyle, 'banner');
+  await service.updateSettings({ raiseStyle: 'full' });
+  assert.strictEqual(service.snapshot().raiseStyle, 'full');
+  await service.updateSettings({ raiseStyle: 'neon' }); // junk is ignored
+  assert.strictEqual(service.snapshot().raiseStyle, 'full');
+});

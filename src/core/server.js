@@ -104,6 +104,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     raiseHand: () => service.raiseHand(),
     raiseUnmute: () => service.raiseUnmute(),
     raiseName: (b) => service.raiseName(b.name),
+    raiseTyping: (b) => service.raiseTyping(b.on === true),
     raiseCancel: () => service.raiseCancel(),
     raiseStop: () => service.raiseStop(),
     startAt: (b) => service.setStartOverride(b.time),

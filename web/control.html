@@ -439,6 +439,7 @@
     const name = $('raiseWho').value.trim();
     if (!name) return;
     $('raiseSend').disabled = true;
+    clearInterval(typingBeat); typingBeat = null;
     try {
       const s = await api('raiseName', { name });
       if (!s) return; // the PIN prompt is showing
@@ -450,18 +451,28 @@
       $('raiseSend').disabled = false;
     }
   };
+  // While a name is being typed the raise hand's countdown is held: tell the timer every 2 seconds, and when typing stops.
+  let typingBeat = null;
+  const typingNow = () => document.activeElement === $('raiseWho') && $('raiseWho').value.trim() !== '';
+  function typingCheck() {
+    if (typingNow()) {
+      if (!typingBeat) { api('raiseTyping', { on: true }); typingBeat = setInterval(() => (typingNow() ? api('raiseTyping', { on: true }) : typingCheck()), 2000); }
+    } else if (typingBeat) { clearInterval(typingBeat); typingBeat = null; api('raiseTyping', { on: false }); }
+  }
+  $('raiseWho').addEventListener('input', typingCheck);
+  $('raiseWho').addEventListener('blur', () => setTimeout(typingCheck, 0));
   let raiseWasOn = false;
   function renderRaise(nowMs) {
     const r = state.raise;
     $('raiseRow').hidden = state.raiseEnabled === false;
-    const on = !!(r && r.mode !== 'cancelled' && nowMs < r.endsAt);
+    const on = !!(r && r.mode !== 'cancelled' && (r.paused || nowMs < r.endsAt));
     $('raiseBtn').hidden = on;
     $('raiseOn').hidden = !on;
     if (on && !raiseWasOn) setTimeout(() => $('raiseWho').focus(), 0); // ready to type the name
     raiseWasOn = on;
-    if (!on) { $('raiseWho').value = ''; $('raiseSent').hidden = true; return; }
-    const left = Math.max(0, Math.ceil((r.endsAt - nowMs) / 1000));
-    $('raiseNote').textContent = (r.mode === 'unmute' ? 'Conductor asked to unmute' : 'Raise hand is on the speaker’s screen') + (r.name ? ' · ' + r.name : '') + ' · ' + left + ' s';
+    if (!on) { $('raiseWho').value = ''; $('raiseSent').hidden = true; typingCheck(); return; }
+    const left = Math.max(0, Math.ceil((r.paused ? r.remainingMs : r.endsAt - nowMs) / 1000));
+    $('raiseNote').textContent = (r.mode === 'unmute' ? 'Conductor asked to unmute' : 'Raise hand is on the speaker’s screen') + (r.name ? ' · ' + r.name : '') + ' · ' + left + ' s' + (r.paused ? ' · held while you type' : '');
     $('raiseUnmute').disabled = r.mode === 'unmute';
   }
   $('startAt').onchange = () => api('startAt', { time: $('startAt').value });
