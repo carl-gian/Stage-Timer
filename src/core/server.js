@@ -98,6 +98,7 @@ function createServer(service, { mdns: useMdns = true } = {}) {
     stop: () => service.timer.finish(),
     reset: () => service.timer.reset(),
     select: (b) => service.timer.select(Number(b.talkId)),
+    switch: (b) => service.timer.switchTo(b.mode === 'start' ? 'start' : 'finish', b.talkId == null ? undefined : Number(b.talkId)),
     adjust: (b) => service.timer.adjust(Number(b.deltaSeconds) || 0),
     refresh: () => service.loadSchedule({ force: true }),
     report: () => service.makeReport(),

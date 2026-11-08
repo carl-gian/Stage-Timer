@@ -85,10 +85,15 @@ test('timer start/stop/adjust/select with fake clock', () => {
   assert.strictEqual(timer.snapshot().targetSecs, 1860);
   timer.adjust(-99999);
   assert.strictEqual(timer.snapshot().targetSecs, 10);
-  timer.select(2);
-  assert.strictEqual(timer.running, false);
-  assert.strictEqual(timer.elapsedMs(), 0);
+  timer.select(2); // another part picked while this one is running: it is only selected, the clock carries on
+  assert.strictEqual(timer.running, true);
+  assert.strictEqual(timer.elapsedMs(), 6000);
+  assert.strictEqual(timer.previewId, 2);
   assert.strictEqual(timer.select(99), false);
+  timer.reset(); // reset puts the clock back, and drops the selection
+  assert.deepStrictEqual([timer.running, timer.elapsedMs(), timer.previewId], [false, 0, null]);
+  timer.select(2); // nothing being timed: it just picks the part
+  assert.deepStrictEqual([timer.currentId, timer.previewId], [2, null]);
 });
 
 test('stop finishes the part and lines up the next one', () => {
@@ -469,4 +474,50 @@ test('zoom raise hand: the countdown is held while the operator types, and never
   service.raiseCancel();
   service.raiseTyping(true); // nothing to hold on the cancelled screen
   assert.strictEqual(service.raise.paused, undefined);
+});
+
+test('selecting another part while one is being timed leaves the timer alone', () => {
+  const { StageTimer } = require('../src/core/timer');
+  let nowMs = 1_000_000;
+  const items = buildSchedule({ type: 'midweek', meeting: null }).map((i, n) => ({ id: n + 1, ...i }));
+  const timer = new StageTimer({ now: () => nowMs });
+  timer.setSchedule(items, { meetingType: 'midweek' });
+  const events = [];
+  timer.on('part-start', (p) => events.push('start ' + p.key));
+  timer.on('part-finish', (p) => events.push('finish ' + p.key));
+
+  timer.start(); // Opening Comments
+  nowMs += 20000;
+  assert.strictEqual(timer.select(5), true); // picked ahead of time, for example to set its OBS scene
+  assert.deepStrictEqual([timer.currentId, timer.running, timer.previewId], [1, true, 5]);
+  assert.strictEqual(timer.snapshot().previewId, 5);
+  assert.strictEqual(Math.round(timer.elapsedMs() / 1000), 20); // the clock was not reset
+  assert.deepStrictEqual(events, ['start opening']);
+
+  nowMs += 5000;
+  timer.pause(); // paused part-way is still "being timed"
+  timer.select(6);
+  assert.deepStrictEqual([timer.currentId, timer.previewId, Math.round(timer.elapsedMs() / 1000)], [1, 6, 25]);
+  timer.select(1); // the current part again: nothing selected
+  assert.strictEqual(timer.previewId, null);
+
+  timer.select(5);
+  assert.strictEqual(timer.switchTo('start'), true); // end part, then start the selected one
+  assert.deepStrictEqual([timer.currentId, timer.running, timer.previewId], [5, true, null]);
+  assert.strictEqual(timer.items[0].completedSecs, 25); // the first part's time was recorded, like Stop
+  assert.deepStrictEqual(events, ['start opening', 'finish opening', 'start ' + timer.items[4].key]);
+
+  nowMs += 3000;
+  timer.select(7);
+  assert.strictEqual(timer.switchTo('finish'), true); // finish the timer, line the selected part up without starting it
+  assert.deepStrictEqual([timer.currentId, timer.running, timer.elapsedMs(), timer.previewId], [7, false, 0, null]);
+  assert.strictEqual(events.at(-1), 'finish ' + timer.items[4].key);
+
+  timer.select(2); // nothing is being timed: picking a part just picks it, as before
+  assert.deepStrictEqual([timer.currentId, timer.previewId], [2, null]);
+  timer.start();
+  timer.select(3);
+  timer.finish(); // a plain Stop lines up the next part in order and drops the selection
+  assert.deepStrictEqual([timer.currentId, timer.previewId], [3, null]);
+  assert.strictEqual(timer.switchTo('start', 999), false);
 });

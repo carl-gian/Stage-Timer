@@ -62,7 +62,7 @@ test('timer: start of opening pins the meeting, later part adapts on select', ()
   timer.setSchedule(midweek(), { meetingType: 'midweek' });
   timer.start();
   now += 60000;
-  timer.pause();
+  timer.finish(); // Stop: the opening is done (a part that is still being timed is only previewed by select)
 
   now = at(18, 55, 40);
   const id = byKey(timer.items, 'living1').id;

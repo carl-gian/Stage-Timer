@@ -185,10 +185,22 @@
   /* ---- PIN ---- */
   .gate { position: fixed; inset: 0; background: color-mix(in srgb, var(--page) 70%, transparent); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: var(--space-5); z-index: 10; }
   .gate.show { display: flex; }
-  .gate form { background: var(--page); box-shadow: var(--shadow), 0 0 0 1px var(--line); border-radius: var(--radius-lg); padding: var(--space-5); width: 100%; max-width: 340px; text-align: center; }
+  .gate form, .gate .confirm { background: var(--page); box-shadow: var(--shadow), 0 0 0 1px var(--line); border-radius: var(--radius-lg); padding: var(--space-5); width: 100%; max-width: 340px; text-align: center; }
   .gate h3 { margin: 0 0 var(--space-1); font-size: var(--text-lg); } .gate p { margin: 0 0 var(--space-4); color: var(--text-dim); font-size: var(--text-sm); }
   .gate input { width: 100%; font-size: 28px; letter-spacing: .4em; text-align: center; padding: 10px; border-radius: var(--radius-md); border: 1.5px solid var(--line); background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; }
   .gate .err { color: var(--danger-text); font-size: var(--text-sm); min-height: 20px; margin: var(--space-2) 0; }
+  .gate .confirm { display: grid; gap: var(--space-2); }
+  .gate .confirm h3, .gate .confirm p { margin-bottom: var(--space-2); }
+  .gate .confirm .alt { background: var(--surface); color: var(--text); border: 1px solid var(--line); }
+  .gate .confirm .ghost { background: transparent; color: var(--text-dim); min-height: var(--tap-min); }
+  .part.pre { outline: 1.5px dashed var(--brand); outline-offset: -3px; }
+  .selpart { margin-top: var(--space-4); padding: var(--space-3); border: 1px dashed var(--brand); border-radius: var(--radius-sm); display: grid; gap: var(--space-2); }
+  .selpart[hidden] { display: none; }
+  .selpart small { color: var(--text-dim); font-size: var(--text-xs); display: block; }
+  .selpart b { font-size: var(--text-md); }
+  .selpart .row2 { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); }
+  .selpart button { min-height: var(--tap-min); border-radius: var(--radius-sm); font-weight: var(--weight-bold); font-size: var(--text-sm); background: var(--surface); padding: 0 var(--space-4); }
+  .selpart #pvStart { background: var(--brand); color: var(--on-brand); }
   .gate button { width: 100%; min-height: var(--tap-main); border-radius: var(--radius-pill); background: var(--brand); color: var(--on-brand); font-weight: var(--weight-bold); font-size: var(--text-md); }
 
   /* ---- Smaller screens ---- */
@@ -280,6 +292,11 @@
     </div>
     <div class="adjlabel">Adjust time for this part</div>
 
+    <div class="selpart" id="pvSel" hidden>
+      <div><small>Selected, not started</small><b id="pvSelName"></b></div>
+      <div class="row2"><button id="pvStart"></button><button id="pvClear">Back</button></div>
+    </div>
+
     <div class="raiseRow" id="raiseRow">
       <button id="raiseBtn">✋ ZOOM Raise Hand</button>
       <div id="raiseOn" hidden>
@@ -298,7 +315,7 @@
     </div>
 
     <div class="scenes" id="scenes">
-      <div class="srow"><label for="selScene">Scene for this part</label><select id="selScene"></select></div>
+      <div class="srow"><label for="selScene" id="selSceneLabel">Scene for this part</label><select id="selScene"></select></div>
       <div class="srow" id="counselRow"><label for="selCounsel">Counseling scene</label><select id="selCounsel"></select></div>
     </div>
   </main>
@@ -317,6 +334,16 @@
       <div id="stObsRow" hidden>OBS <span class="st-pill" id="stObs"><i></i><span></span></span></div>
     </div></section>
   </aside>
+</div>
+
+<div class="gate" id="switchGate" role="dialog" aria-modal="true" aria-labelledby="swTitle">
+  <div class="confirm">
+    <h3 id="swTitle">A timer is still going</h3>
+    <p id="swText"></p>
+    <button id="swStart"></button>
+    <button class="alt" id="swFinish">Finish timer</button>
+    <button class="ghost" id="swKeep">Keep timing</button>
+  </div>
 </div>
 
 <div class="gate" id="gate">
@@ -390,7 +417,7 @@
   const alerter = ST.alerter($('popup'));
   document.querySelectorAll('.adj button').forEach((b) => (b.onclick = () => api('adjust', { deltaSeconds: +b.dataset.d })));
   document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && !$('gate').classList.contains('show') && !/^(SELECT|INPUT)$/.test(document.activeElement.tagName)) { e.preventDefault(); $('go').click(); }
+    if (e.code === 'Space' && !$('gate').classList.contains('show') && !$('switchGate').classList.contains('show') && !/^(SELECT|INPUT)$/.test(document.activeElement.tagName)) { e.preventDefault(); $('go').click(); }
   });
 
   const clockFormat = () => (state.clock && state.clock.format) || '12h';
@@ -478,8 +505,37 @@
   $('startAt').onchange = () => api('startAt', { time: $('startAt').value });
   $('startClear').onclick = () => api('startAt', { time: '' });
 
+  // Another part was picked while a timer is going: it is only selected. Starting it asks first.
+  function renderPreview() {
+    const p = state.items.find((i) => i.id === state.previewId);
+    $('pvSel').hidden = !p;
+    if (!p) return;
+    $('pvSelName').textContent = p.name;
+    $('pvStart').textContent = 'Start ' + p.name + '…';
+  }
+  const closeSwitch = () => $('switchGate').classList.remove('show');
+  $('pvClear').onclick = () => api('select', { talkId: state.currentId });
+  $('pvStart').onclick = () => {
+    const p = state.items.find((i) => i.id === state.previewId);
+    const cur = state.items.find((i) => i.id === state.currentId);
+    if (!p || !cur) return;
+    const left = Math.ceil((state.targetSecs * 1000 - ST.elapsed(state, conn.offset())) / 1000);
+    const time = left >= 0 ? ST.fmt(left) + ' left' : ST.fmt(-left) + ' over';
+    $('swText').textContent = cur.name + (state.running ? ' is still being timed' : ' is paused') + ' (' + time + '). Starting ' + p.name + ' ends it first.';
+    $('swStart').textContent = 'End part, then start ' + p.name;
+    $('switchGate').dataset.target = p.id;
+    $('switchGate').classList.add('show');
+    $('swKeep').focus();
+  };
+  const switchTo = (mode) => { api('switch', { mode, talkId: +$('switchGate').dataset.target }); closeSwitch(); };
+  $('swStart').onclick = () => switchTo('start');
+  $('swFinish').onclick = () => switchTo('finish');
+  $('swKeep').onclick = closeSwitch;
+  $('switchGate').addEventListener('click', (e) => { if (e.target === $('switchGate')) closeSwitch(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSwitch(); });
+
   function renderList() {
-    const key = JSON.stringify(state.items.map((i) => [i.id, i.durationSecs, i.adaptedSecs, i.completedSecs])) + state.currentId + JSON.stringify([state.base && state.base.ms, state.clock && state.clock.format]);
+    const key = JSON.stringify(state.items.map((i) => [i.id, i.durationSecs, i.adaptedSecs, i.completedSecs])) + state.currentId + '|' + state.previewId + JSON.stringify([state.base && state.base.ms, state.clock && state.clock.format]);
     if (key === listKey) return;
     listKey = key;
     const list = $('list'); list.textContent = '';
@@ -490,7 +546,7 @@
         const h = document.createElement('h2'); h.textContent = section; list.appendChild(h);
       }
       const b = document.createElement('button');
-      b.className = 'part' + (it.id === state.currentId ? ' cur' : '');
+      b.className = 'part' + (it.id === state.currentId ? ' cur' : '') + (it.id === state.previewId ? ' pre' : '');
       const changed = it.durationSecs !== it.originalSecs;
       const adapted = it.adaptedSecs != null && it.adaptedSecs !== it.durationSecs;
       b.innerHTML = '<span class="dot"></span><span class="n"></span><span class="at"></span><span class="d' + (adapted ? ' ad' : changed ? ' chg' : '') + '"></span>';
@@ -512,13 +568,14 @@
   let scenesKey = '';
   function renderScenes() {
     const ob = state.obs;
-    const cur = state.items.find((i) => i.id === state.currentId);
+    const cur = state.items.find((i) => i.id === (state.previewId ?? state.currentId)); // a selected part, or the current one
     const show = !!(ob && ob.enabled && cur);
+    if (cur) $('selSceneLabel').textContent = state.previewId ? 'Scene for ' + cur.name : 'Scene for this part';
     $('scenes').classList.toggle('show', show);
     if (!show) return;
     const counselPart = cur.section === 'ministry' && cur.isStudentTalk;
     $('counselRow').style.display = counselPart ? '' : 'none';
-    const key = JSON.stringify([cur.key, ob.scenes, ob.assigned[cur.key], ob.counsel[cur.key], counselPart]);
+    const key = JSON.stringify([cur.key, !!state.previewId, ob.scenes, ob.assigned[cur.key], ob.counsel[cur.key], counselPart]);
     if (key === scenesKey || document.activeElement === $('selScene') || document.activeElement === $('selCounsel')) return;
     scenesKey = key;
     const fill = (sel, current, none, kind) => {
@@ -542,6 +599,7 @@
     applyTheme(state.theme);
     try { localStorage.setItem('stTheme', state.theme); } catch {}
     renderList();
+    renderPreview();
     renderScenes();
     const dayType = state.meetingType === 'weekend' ? 'Weekend meeting' : 'Midweek meeting';
     $('sub').textContent = dayType + (state.circuitVisit ? ' · circuit visit' : '');

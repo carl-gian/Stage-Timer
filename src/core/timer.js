@@ -14,6 +14,7 @@ class StageTimer extends EventEmitter {
     this.closingSecs = closingSecs;
     this.items = [];
     this.currentId = null;
+    this.previewId = null; // a part picked while another is being timed: selected, not started
     this.base = 0; // ms accumulated while stopped
     this.startedAt = null; // ms timestamp while running
     this.meta = {};
@@ -44,6 +45,7 @@ class StageTimer extends EventEmitter {
     this.base = 0;
     this.startedAt = null;
     this.currentId = items.length ? items[0].id : null;
+    this.previewId = null;
     this.planner.reset(meta.meetingType);
     this.overrunSecs = null;
     this._refreshAdaptive();
@@ -73,8 +75,23 @@ class StageTimer extends EventEmitter {
     if (withOverrun) this.overrunSecs = r.overrunSecs;
   }
 
+  /** A part is being timed (running, or paused part-way). */
+  get underway() {
+    return this.running || this.base > 0;
+  }
+
+  /**
+   * Picks a part. While another part is being timed this only *selects* it (`previewId`), for example to set its OBS
+   * scene ahead of time: the running timer is left alone. Starting the selected part is a separate, confirmed step.
+   */
   select(id) {
     if (!this.items.some((i) => i.id === id)) return false;
+    if (this.underway) {
+      this.previewId = id === this.currentId ? null : id;
+      this._changed();
+      return true;
+    }
+    this.previewId = null;
     this.startedAt = null;
     this.base = 0;
     this.currentId = id;
@@ -99,6 +116,19 @@ class StageTimer extends EventEmitter {
     this._changed();
   }
 
+  /**
+   * Moves on from the part that is being timed to the selected one: it is finished first (its time is recorded, like
+   * Stop), then the selected part is lined up, and started too when mode is 'start'.
+   */
+  switchTo(mode, id = this.previewId) {
+    if (id == null || !this.items.some((i) => i.id === id)) return false;
+    if (this.underway && id === this.currentId) return false;
+    if (this.underway) this.finish();
+    this.select(id);
+    if (mode === 'start') this.start();
+    return true;
+  }
+
   /** Stop = this part is done: remember how long it took and line up the next part. */
   finish() {
     const cur = this.current;
@@ -108,6 +138,7 @@ class StageTimer extends EventEmitter {
     this.startedAt = null;
     this.base = 0;
     const next = this.items[this.items.indexOf(cur) + 1];
+    this.previewId = null;
     if (next) this.select(next.id);
     else this._changed();
     this.emit('part-finish', cur);
@@ -116,6 +147,7 @@ class StageTimer extends EventEmitter {
   reset() {
     this.base = 0;
     this.startedAt = null;
+    this.previewId = null;
     this._changed();
   }
 
@@ -146,6 +178,7 @@ class StageTimer extends EventEmitter {
       elapsedMs: this.elapsedMs(),
       closingSecs: this.closingSecs,
       currentId: this.currentId,
+      previewId: this.previewId ?? null,
       targetSecs: cur ? this.actualSecs(cur) : 0,
       overrunSecs: this.overrunSecs,
       adaptiveMode: this.planner.mode,
