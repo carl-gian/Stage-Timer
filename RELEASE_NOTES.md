@@ -1,6 +1,15 @@
-# Stage Timer 1.3.3
+# Stage Timer 1.4.0
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.4.0
+
+- **Picking another part no longer stops the timer.** Before, tapping a different part while one was being timed silently stopped and reset the clock. Now the running or paused timer carries on, and the part you tapped is only *selected* (shown with a dashed outline and a "Selected, not started" panel). This lets you set its OBS scene ahead of time: the *Scene for…* picker follows the selected part, and the scene is saved for when that part starts, without switching OBS now. Tap the running part, or press **Back**, to drop the selection.
+- **Starting another part asks first.** Press **Start…** on the selected part and a warning appears: "A timer is still going". Choose:
+  - **End part, then start…**: ends the running part (its time is recorded, exactly like Stop, including the OBS stop scene and the timer report) and starts the selected one.
+  - **Finish timer**: ends the running part the same way and lines up the selected one without starting it.
+  - **Keep timing**: closes the warning and changes nothing.
+- The normal **Stop** button still lines up the next part in order.
 
 ## What's new in 1.3.3
 
@@ -98,7 +107,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.3.3.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.4.0.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

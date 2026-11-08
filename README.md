@@ -19,6 +19,7 @@ Everything stays in sync. Start a part on the phone and the OBS dock and the spe
 ## What it does
 
 - **Automatic schedule.** Fetches the week's parts and times (cached for offline use). Midweek or weekend is picked from the day, with a manual override and a circuit visit option.
+- **Pick a part without stopping the timer.** Tap another part while one is being timed and it is only selected, so you can set its OBS scene ahead of time. Starting it asks first: *End part, then start*, *Finish timer*, or *Keep timing*.
 - **Control from anywhere.** Start, Stop, Pause, Reset, ±30 s / ±1 min, and choose any part, from a phone, tablet or browser. Protected by a PIN.
 - **OBS dock.** A compact control panel you can dock inside OBS, with a hidden Connect panel (QR code + PIN), a Report button and a button that opens the app's settings.
 - **Speaker's screen (display page).** A big, readable timer for any screen. With no timer going, it shows just the time of day. It opens in your browser by default, or fullscreen on another monitor (for example a third screen) if you pick one under Advanced → *Show speaker's screen on*. Press Esc to close it.
