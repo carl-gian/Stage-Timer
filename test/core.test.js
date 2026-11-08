@@ -329,9 +329,40 @@ test('start time: adaptive timing measures from the set start, not from when the
   assert.ok(it.adaptedSecs > it.durationSecs, 'ahead of schedule: the part is lengthened'); // no first part was ever started
 });
 
+/** A service sitting on a discussion part (Watchtower Study), where Zoom raise hand is offered. */
+function raiseService() {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  service.timer.setSchedule(buildSchedule({ type: 'weekend' }), { meetingType: 'weekend' });
+  service.timer.select(service.timer.items.find((i) => i.key === 'watchtower').id);
+  return service;
+}
+
+test('zoom raise hand: offered only on the discussion parts', () => {
+  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  assert.strictEqual(service.raiseAllowed(), false); // no schedule yet
+  const offered = (type) => {
+    service.timer.setSchedule(buildSchedule({ type }), { meetingType: type });
+    return service.timer.items.filter((i) => { service.timer.select(i.id); return service.raiseAllowed(); }).map((i) => i.key);
+  };
+  assert.deepStrictEqual(offered('weekend'), ['watchtower']);
+  const meeting = { Talks: [{ TalkType: 100, Minutes: 4 }, { TalkType: 101, Minutes: 3, IsStudentTalk: true }, { TalkType: 102, Minutes: 3, IsStudentTalk: true }, { TalkType: 103, Minutes: 4, IsStudentTalk: true }, { TalkType: 104, Minutes: 4, IsStudentTalk: true }, { TalkType: 300, Minutes: 12 }, { TalkType: 301, Minutes: 8 }] };
+  const midweek = (m) => {
+    service.timer.setSchedule(buildSchedule({ type: 'midweek', meeting: m }), { meetingType: 'midweek' });
+    return service.timer.items.filter((i) => { service.timer.select(i.id); return service.raiseAllowed(); }).map((i) => i.key);
+  };
+  const got = midweek(meeting);
+  for (const key of ['digging', 'study', 'concluding']) assert.ok(got.includes(key), key + ' is a discussion part');
+  for (const key of ['opening', 'treasures', 'reading', 'ministry1', 'ministry2']) assert.ok(!got.includes(key), key + ' is not');
+  assert.ok(got.every((k) => ['digging', 'ministry3', 'ministry4', 'living1', 'living2', 'study', 'concluding'].includes(k)));
+  service.timer.select(service.timer.items.find((i) => i.key === 'opening').id);
+  service.raiseHand(); // not offered here: the command does nothing
+  assert.strictEqual(service.raise, null);
+  assert.strictEqual(service.snapshot().raiseAllowed, false);
+});
+
 test('zoom raise hand: shows for 45 seconds, then Cancel, Stop and the unmute alert', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
-  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const service = raiseService();
   const events = [];
   service.on('raise', () => events.push(service.raise && service.raise.mode));
 
@@ -375,7 +406,7 @@ test('zoom raise hand: shows for 45 seconds, then Cancel, Stop and the unmute al
 });
 
 test('zoom raise hand: the controller commands work over the API', async () => {
-  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const service = raiseService();
   const server = createServer(service, { mdns: false });
   const port = await server.start(45816);
   const base = `http://127.0.0.1:${port}`;
@@ -394,7 +425,7 @@ test('zoom raise hand: the controller commands work over the API', async () => {
 });
 
 test('zoom raise hand: can be turned off, and turning it off clears one that is showing', async () => {
-  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const service = raiseService();
   assert.strictEqual(service.settings.zoomRaiseHand, true); // on by default
   assert.strictEqual(service.snapshot().raiseEnabled, true);
   service.raiseHand();
@@ -411,7 +442,7 @@ test('zoom raise hand: can be turned off, and turning it off clears one that is 
 
 test('zoom raise hand: the name of the person is shown, and it then stays for 90 seconds', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
-  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const service = raiseService();
   assert.strictEqual(service.raiseName('Maria'), false); // nothing showing: nowhere to put a name
   service.raiseHand();
   t.mock.timers.tick(30000);
@@ -436,7 +467,7 @@ test('zoom raise hand: the name of the person is shown, and it then stays for 90
 
 test('zoom raise hand: the countdown is held while the operator types, and never for ever', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
-  const service = new StageService({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'st-')) });
+  const service = raiseService();
   service.raiseHand(); // 45 s
   t.mock.timers.tick(30000);
   service.raiseTyping(true);

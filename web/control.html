@@ -491,7 +491,8 @@
   let raiseWasOn = false;
   function renderRaise(nowMs) {
     const r = state.raise;
-    $('raiseRow').hidden = state.raiseEnabled === false;
+    // Only on the discussion parts (and while one is already showing, so it can still be cancelled or stopped)
+    $('raiseRow').hidden = state.raiseEnabled === false || !(state.raiseAllowed || (r && r.mode !== 'cancelled'));
     const on = !!(r && r.mode !== 'cancelled' && (r.paused || nowMs < r.endsAt));
     $('raiseBtn').hidden = on;
     $('raiseOn').hidden = !on;

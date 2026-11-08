@@ -1,6 +1,10 @@
-# Stage Timer 1.4.0
+# Stage Timer 1.4.1
 
 A meeting timer for the stage, controlled from OBS or any phone, with the schedule downloaded automatically.
+
+## What's new in 1.4.1
+
+- **ZOOM Raise Hand only appears on the discussion parts.** The button now shows only when the current part is one where people raise their hands: the Watchtower Study, Spiritual Gems, the Living as Christians parts, the 3rd and 4th Apply Yourself parts, the Congregation Bible Study and Concluding Comments. On the other parts (for example Opening Comments, the Treasures Talk, the Bible Reading, the first two Apply Yourself parts and the Public Talk) it is hidden. If a raise hand is already showing when you move on, its Cancel, Stop and unmute buttons stay until it ends.
 
 ## What's new in 1.4.0
 
@@ -107,7 +111,7 @@ A meeting timer for the stage, controlled from OBS or any phone, with the schedu
 
 ## Download
 
-**Stage-Timer-Setup-1.4.0.exe** (Windows 10 or later), attached below.
+**Stage-Timer-Setup-1.4.1.exe** (Windows 10 or later), attached below.
 
 The installer isn't code-signed yet, so Windows SmartScreen will warn you. Choose **More info → Run anyway**.
 

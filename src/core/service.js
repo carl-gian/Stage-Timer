@@ -17,6 +17,8 @@ const NAMED_SECS = 90; // after a name is sent, the raised hand stays for a minu
 const CANCELLED_SECS = 5; // how long "cancelled" stays after Cancel
 const TYPING_GRACE_MS = 5000; // typing is assumed to have stopped when no signal has come for this long
 const MAX_HOLD_MS = 3 * 60 * 1000; // the most one raise hand can be held while typing
+// Zoom raise hand is offered on the discussion parts: people can raise a hand to comment or answer.
+const RAISE_PARTS = new Set(['watchtower', 'digging', 'living1', 'living2', 'ministry3', 'ministry4', 'study', 'concluding']);
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24-hour HH:MM, as saved
 
 const randomPin = () => String(crypto.randomInt(0, 10000)).padStart(4, '0');
@@ -97,7 +99,13 @@ class StageService extends EventEmitter {
       counsel: this.settings.obsCounselScenes[mt] || {},
     };
     const clock = { show: this.settings.showClock, format: this.settings.clockFormat };
-    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, raiseEnabled: this.settings.zoomRaiseHand, clock, theme: this.settings.theme };
+    return { ...this.timer.snapshot(), obs, report: this.latestReport, base: this.baseStart(), raise: this.raise, raiseEnabled: this.settings.zoomRaiseHand, raiseAllowed: this.raiseAllowed(), clock, theme: this.settings.theme };
+  }
+
+  /** Is the part in front of the operator one where people raise their hands? */
+  raiseAllowed() {
+    const cur = this.timer.current;
+    return !!cur && RAISE_PARTS.has(cur.key);
   }
 
   _setRaise(mode, secs) {
@@ -118,7 +126,7 @@ class StageService extends EventEmitter {
 
   /** Shows "Zoom raise hand" on the speaker's screen; it goes away by itself after 45 seconds. */
   raiseHand() {
-    if (!this.settings.zoomRaiseHand) return;
+    if (!this.settings.zoomRaiseHand || !this.raiseAllowed()) return;
     this._setRaise('hand', RAISE_SECS);
   }
 
